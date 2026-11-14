@@ -4,3 +4,7 @@ temp/
 bin/
 *.log
 .DS_Store
+.next/
+out/
+.env.local
+.env.*.local
