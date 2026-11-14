@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as http from 'http';
 import * as https from 'https';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ffmpegStatic = require('ffmpeg-static');
@@ -47,7 +48,8 @@ export class BinaryService implements OnModuleInit {
   downloadFile(url: string, dest: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const follow = (targetUrl: string) => {
-        https
+        const client = targetUrl.startsWith('http:') ? http : https;
+        client
           .get(targetUrl, (res) => {
             if (
               res.statusCode &&
@@ -55,16 +57,19 @@ export class BinaryService implements OnModuleInit {
               res.statusCode < 400 &&
               res.headers.location
             ) {
+              res.resume();
               return follow(res.headers.location);
             }
             if (res.statusCode !== 200) {
+              res.resume();
               return reject(new Error(`Failed to download binary: HTTP ${res.statusCode}`));
             }
             const file = fs.createWriteStream(dest);
             res.pipe(file);
             file.on('finish', () => {
-              file.close();
-              resolve();
+              file.close(() => {
+                resolve();
+              });
             });
             file.on('error', (err) => {
               fs.unlink(dest, () => {});

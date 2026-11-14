@@ -42,18 +42,18 @@
 **Interfaces:**
 - Produces: Base NestJS package setup, TypeScript compilation config, and dependencies (`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `class-validator`, `class-transformer`, `rxjs`, `ffmpeg-static`, `@types/node`, `typescript`, `jest`).
 
-- [ ] **Step 1: Write backend configuration files**
+- [x] **Step 1: Write backend configuration files**
   Create `backend/package.json` with scripts `"build": "nest build"`, `"start": "node dist/main.js"`, `"start:prod": "node dist/main.js"`, `"test": "jest"`. Create `backend/tsconfig.json`, `backend/tsconfig.build.json`, `backend/nest-cli.json`, and `backend/.gitignore`.
 
-- [ ] **Step 2: Install dependencies**
+- [x] **Step 2: Install dependencies**
   Run: `cd backend && npm install`
   Expected: Clean install of node_modules and creation of package-lock.json.
 
-- [ ] **Step 3: Verify build tooling**
+- [x] **Step 3: Verify build tooling**
   Run: `cd backend && npx nest --version`
   Expected: Displays Nest CLI version (e.g. 10.x).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   ```bash
   git add backend/
   git commit -m "chore: scaffold backend nestjs configuration"
@@ -75,21 +75,21 @@
   - `ExtractMediaDto` validating `url`
   - `DownloadQueryDto` validating `url`, `formatId`, `type` ('video' | 'audio'), optional `jobId`
 
-- [ ] **Step 1: Write tests for platform detection and DTO validation**
+- [x] **Step 1: Write tests for platform detection and DTO validation**
   Test YouTube (`youtube.com`, `youtu.be`), Facebook (`facebook.com`, `fb.watch`), Instagram (`instagram.com`), TikTok (`tiktok.com`), and invalid URLs. Test `DownloadQueryDto` against flag injection characters like `;` or `--`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
   Run: `cd backend && npm test -- test/common/platform.util.spec.ts`
   Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement `detectPlatform` and DTOs**
+- [x] **Step 3: Implement `detectPlatform` and DTOs**
   Create `backend/src/common/platform.util.ts` and `backend/src/media/dto/media.dto.ts`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
   Run: `cd backend && npm test -- test/common/platform.util.spec.ts test/media/media.dto.spec.ts`
   Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add backend/src/common/platform.util.ts backend/src/media/dto/media.dto.ts backend/test/
   git commit -m "feat(common): implement platform detection and input validation DTOs"
@@ -106,21 +106,21 @@
 **Interfaces:**
 - Produces: `ConcurrencyService.run<T>(task: () => Promise<T>): Promise<T>` with a default concurrency cap of 3.
 
-- [ ] **Step 1: Write unit test for ConcurrencyService**
+- [x] **Step 1: Write unit test for ConcurrencyService**
   Assert that when 5 asynchronous tasks are submitted concurrently, at most 3 execute simultaneously, and remaining tasks wait until an active task completes.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `cd backend && npm test -- test/common/concurrency.service.spec.ts`
   Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement `ConcurrencyService`**
+- [x] **Step 3: Implement `ConcurrencyService`**
   Implement in `backend/src/common/concurrency.service.ts`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `cd backend && npm test -- test/common/concurrency.service.spec.ts`
   Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add backend/src/common/concurrency.service.ts backend/test/common/concurrency.service.spec.ts
   git commit -m "feat(common): implement concurrency limiter semaphore"
@@ -141,21 +141,21 @@
   - `BinaryService.ffmpegBinaryPath: string`
   - `BinaryService.onModuleInit(): Promise<void>` (ensures `bin/` exists, downloads binary if absent, sets `0o755`)
 
-- [ ] **Step 1: Write unit test for BinaryService**
+- [x] **Step 1: Write unit test for BinaryService**
   Test platform binary resolution (`yt-dlp_macos` on darwin, `yt-dlp.exe` on win32, `yt-dlp_linux` on linux). Test ffmpeg path resolution from `ffmpeg-static`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `cd backend && npm test -- test/binary/binary.service.spec.ts`
   Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement `BinaryService` and `BinaryModule`**
+- [x] **Step 3: Implement `BinaryService` and `BinaryModule`**
   Support `darwin`, `linux`, `win32` platform detection. Handle download with redirect following and `0o755` permissions.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `cd backend && npm test -- test/binary/binary.service.spec.ts`
   Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add backend/src/binary/ backend/test/binary/
   git commit -m "feat(binary): implement binary bootstrapper and resolution service"
@@ -174,25 +174,25 @@
   - `StreamProxyOptions { targetUrl: string; headers: Record<string, string>; filename: string; mimeType: string }`
   - `StreamProxyService.pipeFromCdn(options: StreamProxyOptions, req: Request, res: Response): void`
 
-- [ ] **Step 1: Write unit tests for StreamProxyService**
+- [x] **Step 1: Write unit tests for StreamProxyService**
   Mock upstream HTTP/HTTPS server. Verify:
   - Custom extraction headers (e.g., `User-Agent`, `Referer`) and `Range` header are forwarded.
   - Upstream 302 redirects are followed up to max limit.
   - Partial content 206 status and Range headers are passed through.
   - Upstream socket is destroyed if client disconnects (`res.on('close')`).
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `cd backend && npm test -- test/media/stream-proxy.service.spec.ts`
   Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement `StreamProxyService`**
+- [x] **Step 3: Implement `StreamProxyService`**
   Implement zero-dependency `http`/`https` proxy in `backend/src/media/stream-proxy.service.ts`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `cd backend && npm test -- test/media/stream-proxy.service.spec.ts`
   Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add backend/src/media/stream-proxy.service.ts backend/test/media/stream-proxy.service.spec.ts
   git commit -m "feat(media): implement SSRF-safe upstream CDN stream proxy service"
@@ -219,21 +219,21 @@
   - `GET /api/media/download`: Merged download stream with immediate temp file deletion on finish/close.
   - `main.ts`: Boots NestJS app on `process.env.PORT || 3000` with CORS and ValidationPipe.
 
-- [ ] **Step 1: Write tests for MediaService and Controller**
+- [x] **Step 1: Write tests for MediaService and Controller**
   Test format normalization logic (progressive vs DASH merge vs MP3 audio), token generation and TTL lookup, and controller route dispatching.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `cd backend && npm test -- test/media/media.service.spec.ts`
   Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement MediaService, MediaController, AppModule, and Main**
+- [x] **Step 3: Implement MediaService, MediaController, AppModule, and Main**
   Write complete implementations in `backend/src/media/`, `backend/src/app.module.ts`, and `backend/src/main.ts`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `cd backend && npm test -- test/media/media.service.spec.ts test/media/media.controller.spec.ts`
   Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add backend/src/ backend/test/
   git commit -m "feat(media): implement media service, controller, and app bootstrap"
@@ -247,14 +247,14 @@
 - Create: `backend/README.md`
 - Verify: Full compilation with `npm run build`
 
-- [ ] **Step 1: Run production build**
+- [x] **Step 1: Run production build**
   Run: `cd backend && npm run build`
   Expected: `dist/main.js` and compiled modules generated without TypeScript errors.
 
-- [ ] **Step 2: Write deployment and testing instructions**
+- [x] **Step 2: Write deployment and testing instructions**
   Document Hostinger Web App configuration (Node version, entrypoint `dist/main.js`, env vars), local testing steps, and API route contract in `backend/README.md`.
 
-- [ ] **Step 3: Final commit**
+- [x] **Step 3: Final commit**
   ```bash
   git add backend/
   git commit -m "docs: add deployment guide and verify production build"
