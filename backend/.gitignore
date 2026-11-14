@@ -1,0 +1,15 @@
+# compiled output
+/dist
+/node_modules
+
+# temp media files & binaries
+/temp
+/bin
+*.log
+
+# testing
+/coverage
+
+# OS files
+.DS_Store
+Thumbs.db
