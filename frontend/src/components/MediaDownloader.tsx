@@ -165,6 +165,11 @@ export default function MediaDownloader() {
     const cleanUrl = cleanUrlInput(targetUrl);
     if (!cleanUrl) return;
 
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('You are currently offline. Check your internet connection and try again.');
+      return;
+    }
+
     const platform = detectClientPlatform(cleanUrl);
     setDetectedPlatform(platform);
 
@@ -365,7 +370,8 @@ export default function MediaDownloader() {
             <button
               type="button"
               onClick={handleClipboardButton}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              aria-label="Paste URL from clipboard"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-all cursor-pointer"
             >
               <ClipboardPaste className="w-3.5 h-3.5 text-emerald-400" />
               Paste from Clipboard
@@ -382,6 +388,8 @@ export default function MediaDownloader() {
             >
               <div className="relative flex-1 flex items-center">
                 <input
+                  id="media-url-input"
+                  aria-label="Media link from YouTube, TikTok, Instagram, or Facebook"
                   type="url"
                   value={url}
                   onChange={(e) => handleUrlChange(e.target.value)}
@@ -390,7 +398,7 @@ export default function MediaDownloader() {
                     PLATFORM_SHOWCASE.find((p) => p.platform === detectedPlatform)?.placeholder ||
                     'https://www.youtube.com/watch?v=... or TikTok / Reel link'
                   }
-                  className="w-full bg-transparent pl-4 pr-10 py-3.5 text-sm sm:text-base text-white placeholder-zinc-500 focus:outline-none"
+                  className="w-full bg-transparent pl-4 pr-10 py-3.5 text-sm sm:text-base text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 rounded-xl"
                   required
                 />
                 {url && (
@@ -402,8 +410,8 @@ export default function MediaDownloader() {
                       setMedia(null);
                       setError(null);
                     }}
-                    aria-label="Clear URL"
-                    className="absolute right-3 p-1 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+                    aria-label="Clear URL input"
+                    className="absolute right-3 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -414,7 +422,8 @@ export default function MediaDownloader() {
                 <button
                   type="submit"
                   disabled={loading || !url.trim()}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r ${theme.buttonClasses} hover:brightness-110 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:shadow-none text-white font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg transition-all cursor-pointer`}
+                  aria-label={loading ? 'Extracting media streams...' : 'Extract media streams'}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r ${theme.buttonClasses} hover:brightness-110 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:shadow-none text-white font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer`}
                 >
                   {loading ? (
                     <>
@@ -442,18 +451,20 @@ export default function MediaDownloader() {
                     key={item.platform}
                     type="button"
                     onClick={() => setDetectedPlatform(item.platform)}
-                    className={`group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                    aria-label={`Select ${item.label} platform`}
+                    aria-pressed={isSelected}
+                    className={`group inline-flex items-center gap-2 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-white/10 border-white/25 text-white shadow-sm'
-                        : 'bg-white/[0.02] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+                        : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.05]'
                     }`}
                   >
                     <span
                       className="w-2 h-2 rounded-full transition-transform group-hover:scale-125"
                       style={{ backgroundColor: item.dotColor }}
                     />
-                    <span className="font-semibold text-zinc-200">{item.label}</span>
-                    <span className="text-[11px] text-zinc-500 hidden sm:inline">
+                    <span className="font-semibold text-zinc-100">{item.label}</span>
+                    <span className="text-[11px] text-zinc-400 hidden sm:inline">
                       • {item.tag}
                     </span>
                   </button>
@@ -468,7 +479,8 @@ export default function MediaDownloader() {
                 handleUrlChange(DEMO_SAMPLE_URL);
                 fetchMediaInfo(DEMO_SAMPLE_URL);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 transition-all cursor-pointer disabled:opacity-50"
+              aria-label="Try 1-Click Demo with sample YouTube video"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5 text-emerald-400" />
               Try 1-Click Demo
@@ -478,13 +490,25 @@ export default function MediaDownloader() {
           <AnimatePresence>
             {error && (
               <motion.div
+                role="alert"
+                aria-live="assertive"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 backdrop-blur-md text-red-200 text-sm rounded-xl px-4 py-3.5"
+                className="flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/30 backdrop-blur-md text-red-200 text-sm rounded-xl px-4 py-3.5"
               >
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{error}</span>
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{error}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  aria-label="Dismiss error notification"
+                  className="text-red-400 hover:text-red-200 p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -527,7 +551,9 @@ export default function MediaDownloader() {
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={media.thumbnail}
-                        alt={media.title}
+                        alt={`Thumbnail preview for ${media.title}`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
@@ -560,15 +586,21 @@ export default function MediaDownloader() {
                       </h2>
                     </div>
 
-                    <div className="inline-flex p-1 rounded-xl bg-zinc-950/90 border border-white/10 w-fit">
+                    <div
+                      role="tablist"
+                      aria-label="Media format categories"
+                      className="inline-flex p-1 rounded-xl bg-zinc-950/90 border border-white/10 w-fit"
+                    >
                       {(['video', 'audio'] as const).map((tab) => {
                         const isActive = activeTab === tab;
                         return (
                           <button
                             key={tab}
                             type="button"
+                            role="tab"
+                            aria-selected={isActive}
                             onClick={() => setActiveTab(tab)}
-                            className={`relative inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                            className={`relative inline-flex items-center gap-2 px-5 py-2 min-h-[38px] rounded-lg text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer ${
                               isActive ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
                             }`}
                           >
@@ -602,6 +634,8 @@ export default function MediaDownloader() {
                 <AnimatePresence>
                   {jobProgress && activeFormatId && (
                     <motion.div
+                      role="status"
+                      aria-live="polite"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
@@ -652,9 +686,13 @@ export default function MediaDownloader() {
                       transition={{ delay: idx * 0.05 }}
                     >
                       <SpotlightCard
+                        as="button"
+                        type="button"
+                        disabled={Boolean(activeFormatId)}
                         spotlightColor={theme.spotlightRgba}
                         onClick={() => !activeFormatId && handleDownloadClick(format)}
-                        className={`p-4 cursor-pointer group ${
+                        aria-label={`Download ${format.label} ${format.ext.toUpperCase()}${sizeText ? `, approx ${sizeText}` : ''}`}
+                        className={`w-full p-4 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none ${
                           activeFormatId && !isProcessing ? 'opacity-50 pointer-events-none' : ''
                         }`}
                       >

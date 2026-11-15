@@ -28,7 +28,7 @@ export default function BlurText({
             delay: index * delay,
             ease: [0.22, 1, 0.36, 1],
           }}
-          className="inline-block will-change-[transform,filter,opacity] mr-2 sm:mr-3 last:mr-0"
+          className="inline-block mr-2 sm:mr-3 last:mr-0"
         >
           {word}
         </motion.span>

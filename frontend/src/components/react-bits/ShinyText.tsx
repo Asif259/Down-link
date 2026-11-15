@@ -25,7 +25,7 @@ export default function ShinyText({
         animationDuration: `${speed}s`,
       }}
       className={`inline-block bg-clip-text text-transparent ${
-        disabled ? '' : 'animate-[shimmer_3s_infinite_linear]'
+        disabled ? '' : 'animate-[shimmer_3s_infinite_linear] motion-reduce:animate-none'
       } ${className}`}
     >
       {text}

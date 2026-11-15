@@ -36,7 +36,7 @@ const PLATFORM_BADGES: Record<
   },
   unknown: {
     label: 'Media',
-    classes: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+    classes: 'bg-zinc-800 text-zinc-300 border-zinc-700',
     spotlight: 'rgba(16, 185, 129, 0.14)',
   },
 };
@@ -61,7 +61,7 @@ export default function DownloadHistory({
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-4 pt-4">
+    <section className="space-y-4 pt-4" aria-label="Recent Extractions History">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-emerald-400" />
@@ -73,7 +73,8 @@ export default function DownloadHistory({
         <button
           type="button"
           onClick={onClearAll}
-          className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
+          aria-label="Clear all extraction history"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-red-400 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
           Clear All
@@ -90,21 +91,24 @@ export default function DownloadHistory({
               key={item.id}
               spotlightColor={badge.spotlight}
               className={`p-3.5 group ${
-                isCurrent ? 'border-emerald-500/40' : ''
+                isCurrent ? 'border-emerald-500/40 ring-1 ring-emerald-500/30' : ''
               }`}
             >
-              <div className="flex gap-3.5">
+              <div className="flex gap-3.5 items-stretch">
                 <button
                   type="button"
                   disabled={isLoading}
                   onClick={() => onSelect(item.url)}
-                  className="relative w-28 h-18 bg-zinc-950 rounded-xl overflow-hidden shrink-0 border border-white/10 cursor-pointer"
+                  aria-label={`Reload streams for ${item.title}`}
+                  className="relative w-28 h-20 bg-zinc-950 rounded-xl overflow-hidden shrink-0 border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-all cursor-pointer"
                 >
                   {item.thumbnail ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={item.thumbnail}
-                      alt={item.title}
+                      alt={item.title || 'Thumbnail preview'}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (
@@ -120,19 +124,19 @@ export default function DownloadHistory({
                 </button>
 
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  <div className="pr-5 space-y-1">
+                  <div className="pr-6 space-y-1">
                     <div className="flex items-center gap-2">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badge.classes}`}
                       >
                         {badge.label}
                       </span>
-                      <span className="text-[11px] text-zinc-500">
+                      <span className="text-[11px] text-zinc-400 font-medium">
                         {formatRelativeTime(item.timestamp)}
                       </span>
                     </div>
 
-                    <p className="text-xs font-semibold text-zinc-100 truncate">
+                    <p className="text-xs font-semibold text-zinc-100 truncate" title={item.title}>
                       {item.title}
                     </p>
                   </div>
@@ -142,7 +146,8 @@ export default function DownloadHistory({
                       type="button"
                       disabled={isLoading}
                       onClick={() => onSelect(item.url)}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                      aria-label={`Reload ${item.lastFormatLabel ? item.lastFormatLabel.split(' ')[0] : 'stream'} for ${item.title}`}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-md px-1 py-0.5 disabled:opacity-50 cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
                       {item.lastFormatLabel
@@ -154,8 +159,9 @@ export default function DownloadHistory({
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Open source link"
-                      className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                      title="Open source link in new tab"
+                      aria-label="Open source link in new tab"
+                      className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg hover:bg-white/5 transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
@@ -165,8 +171,8 @@ export default function DownloadHistory({
                 <button
                   type="button"
                   onClick={() => onRemove(item.id)}
-                  aria-label="Remove item"
-                  className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                  aria-label={`Remove ${item.title} from history`}
+                  className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

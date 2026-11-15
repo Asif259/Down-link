@@ -36,8 +36,14 @@ export default function Aurora({
     resize();
     window.addEventListener('resize', resize);
 
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const render = () => {
-      time += 0.008 * speed;
+      if (!prefersReducedMotion) {
+        time += 0.008 * speed;
+      }
       const width = canvas.offsetWidth;
       const height = canvas.offsetHeight;
 
@@ -65,13 +71,15 @@ export default function Aurora({
         ctx.fill();
       });
 
-      animationFrameId = requestAnimationFrame(render);
+      if (!prefersReducedMotion) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
     render();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resize);
     };
   }, [colorStops, speed, amplitude]);
