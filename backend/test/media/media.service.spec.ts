@@ -334,7 +334,7 @@ describe('MediaService', () => {
       const args = (service as any).getYoutubeExtractorArgs(true);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=android,mweb,web_embedded,tv,web',
+        'youtube:player_client=tv_samsung,visionos,web,mweb',
       ]);
     });
 
@@ -342,7 +342,7 @@ describe('MediaService', () => {
       const args = (service as any).getYoutubeExtractorArgs(false);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+        'youtube:player_client=tv_samsung,visionos,android',
       ]);
     });
   });
@@ -366,7 +366,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+          'youtube:player_client=tv_samsung,visionos,android',
           '--js-runtimes',
           'node',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -432,7 +432,7 @@ describe('MediaService', () => {
         binaryService.ytDlpPath,
         expect.arrayContaining([
           '--extractor-args',
-          'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+          'youtube:player_client=tv_samsung,visionos,android',
         ]),
         expect.anything(),
       );
@@ -526,7 +526,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+          'youtube:player_client=tv_samsung,visionos,android',
           '--js-runtimes',
           'node',
           '--merge-output-format',

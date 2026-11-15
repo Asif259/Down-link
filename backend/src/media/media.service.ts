@@ -420,12 +420,12 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     if (hasCookies) {
       return [
         '--extractor-args',
-        'youtube:player_client=android,mweb,web_embedded,tv,web',
+        'youtube:player_client=tv_samsung,visionos,web,mweb',
       ];
     }
     return [
       '--extractor-args',
-      'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+      'youtube:player_client=tv_samsung,visionos,android',
     ];
   }
 
@@ -581,8 +581,8 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       const clientArg =
         youtubeClientArg ||
         (useCookies
-          ? 'youtube:player_client=android,mweb,web_embedded,tv,web'
-          : 'youtube:player_client=android,mweb,web_embedded,android_vr,tv');
+          ? 'youtube:player_client=tv_samsung,visionos,web,mweb'
+          : 'youtube:player_client=tv_samsung,visionos,android');
       args.push('--extractor-args', clientArg, '--js-runtimes', 'node');
     }
 
@@ -665,26 +665,26 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
         const hasCookies = this.hasConfiguredCookies();
         if (hasCookies) {
           // When hasCookies === true:
-          // Attempt 1: Run WITH cookies and player_client=android,mweb,web_embedded,tv,web
+          // Attempt 1: Run WITH cookies and player_client=tv_samsung,visionos,web,mweb
           try {
             raw = await this.runYtDlpExtract(
               cleanUrl,
               platform,
               true,
-              'youtube:player_client=android,mweb,web_embedded,tv,web',
+              'youtube:player_client=tv_samsung,visionos,web,mweb',
             );
           } catch (err) {
             firstError = err;
             this.logger.warn(
               `YouTube Attempt 1 (with cookies) failed: ${err instanceof Error ? err.message : String(err)}. Retrying without cookies...`,
             );
-            // Attempt 2 (Fallback): Run WITHOUT cookies and player_client=android,mweb,web_embedded,android_vr,tv
+            // Attempt 2 (Fallback): Run WITHOUT cookies and player_client=tv_samsung,visionos,android
             try {
               raw = await this.runYtDlpExtract(
                 cleanUrl,
                 platform,
                 false,
-                'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+                'youtube:player_client=tv_samsung,visionos,android',
               );
             } catch (err2) {
               throw err2 || firstError;
@@ -692,26 +692,26 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           }
         } else {
           // When hasCookies === false:
-          // Attempt 1: Run WITHOUT cookies and player_client=android,mweb,web_embedded,android_vr,tv
+          // Attempt 1: Run WITHOUT cookies and player_client=tv_samsung,visionos,android
           try {
             raw = await this.runYtDlpExtract(
               cleanUrl,
               platform,
               false,
-              'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
+              'youtube:player_client=tv_samsung,visionos,android',
             );
           } catch (err) {
             firstError = err;
             this.logger.warn(
               `YouTube Attempt 1 (cookie-free) failed: ${err instanceof Error ? err.message : String(err)}. Retrying with fallback clients...`,
             );
-            // Attempt 2 (Fallback): Run WITHOUT cookies and player_client=android,mweb,tv
+            // Attempt 2 (Fallback): Run WITHOUT cookies and player_client=android,web_embedded,tv_samsung
             try {
               raw = await this.runYtDlpExtract(
                 cleanUrl,
                 platform,
                 false,
-                'youtube:player_client=android,mweb,tv',
+                'youtube:player_client=android,web_embedded,tv_samsung',
               );
             } catch (err2) {
               throw err2 || firstError;
@@ -976,8 +976,8 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             const hasCookies = this.hasConfiguredCookies();
             const clientArg =
               hasCookies && tempCookie
-                ? 'youtube:player_client=android,mweb,web_embedded,tv,web'
-                : 'youtube:player_client=android,mweb,web_embedded,android_vr,tv';
+                ? 'youtube:player_client=tv_samsung,visionos,web,mweb'
+                : 'youtube:player_client=tv_samsung,visionos,android';
             args.push('--extractor-args', clientArg, '--js-runtimes', 'node');
           }
 
