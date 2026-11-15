@@ -349,8 +349,8 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       return 'YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.';
     }
     if (lower.includes('sign in to confirm') || lower.includes('not a bot')) {
-      const detail = stderr.trim().slice(-300).replace(/\n/g, ' ');
-      return `YouTube blocked the server IP. Details: ${detail}`;
+      const errorLine = stderr.split('\n').find((l) => l.includes('ERROR:')) || stderr.trim().slice(-200);
+      return `YouTube blocked the server IP. Details: ${errorLine.replace(/\n/g, ' ')}`;
     }
     if (lower.includes('login required') || lower.includes('rate-limit reached')) {
       return 'This platform requires authentication. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
@@ -700,7 +700,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
                   fallbackClients,
                 );
               } catch (err3) {
-                throw err3 || err2 || firstError;
+                const msg1 = firstError instanceof Error ? firstError.message : String(firstError);
+                const msg2 = err2 instanceof Error ? err2.message : String(err2);
+                const msg3 = err3 instanceof Error ? err3.message : String(err3);
+                throw new BadRequestException(`Attempt 1 (with cookies): ${msg1} | Attempt 2 (no cookies): ${msg2} | Attempt 3: ${msg3}`);
               }
             }
           }
