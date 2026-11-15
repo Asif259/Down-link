@@ -95,12 +95,22 @@ export class BinaryService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Ensure executable permissions on POSIX
-    if (process.platform !== 'win32' && fs.existsSync(this.ytDlpPath)) {
+    if (process.platform !== 'win32') {
+      if (fs.existsSync(this.ytDlpPath)) {
+        try {
+          fs.chmodSync(this.ytDlpPath, 0o755);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`chmod 755 on ${this.ytDlpBinaryName} failed: ${msg}`);
+        }
+      }
       try {
-        fs.chmodSync(this.ytDlpPath, 0o755);
+        if (this.ffmpegBinaryPath && fs.existsSync(this.ffmpegBinaryPath)) {
+          fs.chmodSync(this.ffmpegBinaryPath, 0o755);
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.warn(`chmod 755 on ${this.ytDlpBinaryName} failed: ${msg}`);
+        this.logger.warn(`chmod 755 on ffmpeg binary failed: ${msg}`);
       }
     }
 

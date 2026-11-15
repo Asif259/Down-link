@@ -816,7 +816,11 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       audioFormats.find((f: any) => String(f.itag) === '140') ||
       audioFormats[0];
 
-    const ffmpegArgs: string[] = ['-y'];
+    const ffmpegArgs: string[] = [
+      '-y',
+      '-user_agent',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    ];
 
     if (type === 'audio') {
       if (!bestAudio?.url) {
@@ -944,13 +948,16 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
             if (code !== 0 || !fs.existsSync(finalPath)) {
               cleanupTempArtifacts();
+              const errDetail =
+                stderr.trim().split('\n').reverse().find((l) => l.trim())?.slice(0, 200) ||
+                `exit code ${code}`;
               this.logger.warn(`FFmpeg fallback merge failed: ${stderr.trim().slice(0, 300)}`);
               this.emitProgress(jobId, {
                 status: 'error',
                 percent: 0,
-                message: 'Failed to process media file.',
+                message: `Failed to process media file: ${errDetail}`,
               });
-              return reject(new BadRequestException('Failed to process media file.'));
+              return reject(new BadRequestException(`Failed to process media file: ${errDetail}`));
             }
 
             this.emitProgress(jobId, { status: 'ready', percent: 100 });
@@ -960,10 +967,12 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           child.on('error', (err) => {
             if (isDone) return;
             isDone = true;
-            clearTimeout(timer);
+            if (timer) clearTimeout(timer);
             cleanupTempArtifacts();
             this.logger.error(`FFmpeg process error: ${err.message}`);
-            reject(new BadRequestException('Failed to execute media converter process.'));
+            reject(
+              new BadRequestException(`Failed to execute media converter process: ${err.message}`),
+            );
           });
         }),
     );
