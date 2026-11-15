@@ -25,6 +25,7 @@ import DownloadHistory from './DownloadHistory';
 import {
   API_BASE_URL,
   CleanFormat,
+  cleanUrlInput,
   clearAllHistory,
   detectClientPlatform,
   formatBytes,
@@ -115,13 +116,14 @@ export default function MediaDownloader() {
   const theme = PLATFORM_THEMES[media?.platform || detectedPlatform];
 
   const handleUrlChange = (value: string) => {
-    setUrl(value);
-    setDetectedPlatform(detectClientPlatform(value));
+    const cleaned = cleanUrlInput(value);
+    setUrl(cleaned);
+    setDetectedPlatform(detectClientPlatform(cleaned));
     if (error) setError(null);
   };
 
   const fetchMediaInfo = async (targetUrl: string) => {
-    const cleanUrl = targetUrl.trim();
+    const cleanUrl = cleanUrlInput(targetUrl);
     if (!cleanUrl) return;
 
     const platform = detectClientPlatform(cleanUrl);
@@ -174,10 +176,12 @@ export default function MediaDownloader() {
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
     if (pastedText) {
-      handleUrlChange(pastedText);
-      fetchMediaInfo(pastedText);
+      const cleaned = cleanUrlInput(pastedText);
+      handleUrlChange(cleaned);
+      fetchMediaInfo(cleaned);
     }
   };
 
@@ -185,8 +189,9 @@ export default function MediaDownloader() {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
-        handleUrlChange(text);
-        fetchMediaInfo(text);
+        const cleaned = cleanUrlInput(text);
+        handleUrlChange(cleaned);
+        fetchMediaInfo(cleaned);
       }
     } catch {
       setError('Clipboard permission blocked. Press Cmd+V or Ctrl+V inside the input box.');

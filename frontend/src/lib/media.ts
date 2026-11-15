@@ -28,8 +28,21 @@ export interface JobProgress {
 
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
+export function cleanUrlInput(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+
+  // Extract the true URL if multiple URLs were accidentally glued together:
+  // e.g. "https://youtu.be/xyzhttps://youtu.be/xyz" -> "https://youtu.be/xyz"
+  const parts = trimmed.split(/(?=https?:\/\/)/i).filter(Boolean);
+  if (parts.length > 1) {
+    return (parts[parts.length - 1] || parts[0]).trim();
+  }
+  return trimmed;
+}
+
 export function detectClientPlatform(rawUrl: string): SupportedPlatform {
-  const trimmed = rawUrl.trim();
+  const trimmed = cleanUrlInput(rawUrl);
   if (!trimmed) return 'unknown';
 
   try {
