@@ -1,13 +1,18 @@
+# Dependencies & Build Outputs
 node_modules/
 dist/
-temp/
-bin/
-cookies/
-*.txt
-*.log
-.DS_Store
-.next/
 out/
-.env.local
-.env.*.local
+.next/
+
+# Binaries, Runtime Temp Files & Secrets
+backend/bin/
+backend/temp/*
+!backend/temp/.gitkeep
+backend/cookies/*.txt
+!backend/cookies/.gitkeep
+backend/tmp/
 *.zip
+.env
+.env.*
+!.env.example
+.DS_Store

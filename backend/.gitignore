@@ -3,9 +3,11 @@
 /node_modules
 
 # temp media files & binaries & cookies
-/temp
+/temp/*
+!/temp/.gitkeep
 /bin
-/cookies
+/cookies/*
+!/cookies/.gitkeep
 *.txt
 *.log
 
