@@ -37,6 +37,8 @@ let MediaController = class MediaController {
             concurrency: this.concurrencyService.getStatus(),
             ytDlpPath: this.binaryService.ytDlpPath,
             cookies: this.mediaService.getCookieStats(),
+            nodeExecPath: process.execPath,
+            nodeVersion: process.version,
         };
     }
     async extract(dto) {

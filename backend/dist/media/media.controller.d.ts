@@ -22,6 +22,8 @@ export declare class MediaController {
             configured: boolean;
             bytes: number;
         };
+        nodeExecPath: string;
+        nodeVersion: string;
     };
     extract(dto: ExtractMediaDto): Promise<import("./media.service").MediaInfoResponse>;
     updateCookies(dto: UpdateCookiesDto): Promise<{
