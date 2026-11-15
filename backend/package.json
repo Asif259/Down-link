@@ -4,6 +4,7 @@
   "description": "All-in-one media downloader backend optimized for Hostinger Web & Cloud hosting",
   "author": "",
   "private": true,
+  "main": "dist/main.js",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
