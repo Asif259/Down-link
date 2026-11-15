@@ -290,19 +290,19 @@ describe('MediaService', () => {
   });
 
   describe('getYoutubeExtractorArgs', () => {
-    it('returns android, web, mweb client and skips webpage/configs when hasCookies is true', () => {
+    it('returns web-embedded and mobile clients when hasCookies is true', () => {
       const args = (service as any).getYoutubeExtractorArgs(true);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
+        'youtube:player_client=mweb,web_embedded,android,web',
       ]);
     });
 
-    it('returns android, ios and skips webpage/configs when hasCookies is false', () => {
+    it('returns web-embedded and mobile clients without webpage skip when hasCookies is false', () => {
       const args = (service as any).getYoutubeExtractorArgs(false);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=android,ios;player_skip=webpage,configs',
+        'youtube:player_client=mweb,web_embedded,android',
       ]);
     });
   });
@@ -327,7 +327,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android,ios;player_skip=webpage,configs',
+          'youtube:player_client=mweb,web_embedded,android',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]),
         {
@@ -371,7 +371,7 @@ describe('MediaService', () => {
         expect.arrayContaining([
           '--force-ipv4',
           '--extractor-args',
-          'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
+          'youtube:player_client=mweb,web_embedded,android,web',
           '--cookies',
         ]),
         expect.anything(),
@@ -437,7 +437,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android,ios;player_skip=webpage,configs',
+          'youtube:player_client=mweb,web_embedded,android',
           '--merge-output-format',
           'mp4',
         ]),

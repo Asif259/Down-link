@@ -18,6 +18,10 @@ export declare class MediaController {
         uptimeSeconds: number;
         concurrency: import("../common/concurrency.service").ConcurrencyStatus;
         ytDlpPath: string;
+        cookies: {
+            configured: boolean;
+            bytes: number;
+        };
     };
     extract(dto: ExtractMediaDto): Promise<import("./media.service").MediaInfoResponse>;
     updateCookies(dto: UpdateCookiesDto): Promise<{

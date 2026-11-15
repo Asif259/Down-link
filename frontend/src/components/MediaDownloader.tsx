@@ -203,7 +203,7 @@ export default function MediaDownloader() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to extract media information.');
+        throw new Error(data.message || data.error || 'Failed to extract media information.');
       }
 
       setMedia(data);
@@ -272,12 +272,12 @@ export default function MediaDownloader() {
     }
   }, [handleUrlChange, fetchMediaInfo]);
 
-  const listenToJobProgress = (jobId: string, downloadToken: string) => {
+  const listenToJobProgress = (jobId: string) => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
 
-    const es = new EventSource(`${API_BASE_URL}/api/progress/${jobId}`);
+    const es = new EventSource(`${API_BASE_URL}/api/media/progress/${jobId}`);
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {
@@ -289,9 +289,6 @@ export default function MediaDownloader() {
           es.close();
           eventSourceRef.current = null;
           setActiveFormatId(null);
-          triggerBrowserDownload(
-            `${API_BASE_URL}/api/download/${downloadToken}`
-          );
         } else if (payload.status === 'error') {
           es.close();
           eventSourceRef.current = null;
@@ -307,7 +304,6 @@ export default function MediaDownloader() {
       es.close();
       eventSourceRef.current = null;
       setActiveFormatId(null);
-      setError('Connection to progress stream lost.');
     };
   };
 
@@ -325,37 +321,31 @@ export default function MediaDownloader() {
     if (!media) return;
     setError(null);
     setActiveFormatId(format.formatId);
+    setJobProgress(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/download/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          formatId: format.formatId,
-          ext: format.ext,
-          type: format.type,
-          needsMerge: format.needsMerge,
-          mediaTitle: media.title,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to start download process.');
-      }
-
-      if (data.mode === 'direct_stream') {
+      if (!format.needsMerge && format.streamToken) {
+        // Zero-disk Direct CDN stream proxy for instant mobile / 360p formats
         setActiveFormatId(null);
         triggerBrowserDownload(
-          `${API_BASE_URL}/api/download/${data.token}`
+          `${API_BASE_URL}/api/media/stream/${format.streamToken}`
         );
-      } else if (data.mode === 'job_progress') {
-        listenToJobProgress(data.jobId, data.token);
+        return;
       }
+
+      // High-res DASH or MP3 audio conversion via server FFmpeg
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      setJobProgress({ status: 'starting', percent: 5, message: 'Starting download...' });
+      listenToJobProgress(jobId);
+
+      const downloadUrl = `${API_BASE_URL}/api/media/download?url=${encodeURIComponent(
+        url.trim()
+      )}&formatId=${encodeURIComponent(format.formatId)}&type=${format.type}&jobId=${jobId}`;
+
+      triggerBrowserDownload(downloadUrl);
     } catch (err: unknown) {
       setActiveFormatId(null);
+      setJobProgress(null);
       const message =
         err instanceof Error ? err.message : 'Could not initialize download.';
       setError(message);

@@ -127,6 +127,15 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
+    try {
+      const stats = fs.statSync(sourcePath);
+      if (stats.size < 10) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+
     const tempCookiePath = path.join(
       this.tempDir,
       `cookie_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.txt`,
@@ -299,12 +308,12 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     if (hasCookies) {
       return [
         '--extractor-args',
-        'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
+        'youtube:player_client=mweb,web_embedded,android,web',
       ];
     }
     return [
       '--extractor-args',
-      'youtube:player_client=android,ios;player_skip=webpage,configs',
+      'youtube:player_client=mweb,web_embedded,android',
     ];
   }
 
@@ -519,7 +528,14 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
         new Promise<void>((resolve, reject) => {
           const tempCookie = this.createTempCookieFile(platform);
           const cacheDir = path.join(this.tempDir, '.cache');
-          const safeFormatId = formatId === 'bestaudio' ? 'bestaudio/best' : formatId;
+          let safeFormatId = formatId;
+          if (formatId === 'bestaudio') {
+            safeFormatId = 'bestaudio/best';
+          } else if (type === 'video' && formatId.includes('+')) {
+            safeFormatId = `${formatId}/bestvideo+bestaudio/best`;
+          } else if (type === 'video') {
+            safeFormatId = `${formatId}/best`;
+          }
           const args = [
             '--no-playlist',
             '--newline',
