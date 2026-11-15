@@ -92,6 +92,45 @@ const PLATFORM_THEMES: Record<
   },
 };
 
+const PLATFORM_SHOWCASE: Array<{
+  platform: SupportedPlatform;
+  label: string;
+  tag: string;
+  dotColor: string;
+  placeholder: string;
+}> = [
+  {
+    platform: 'youtube',
+    label: 'YouTube',
+    tag: '1080p HD & MP3',
+    dotColor: '#ef4444',
+    placeholder: 'https://www.youtube.com/watch?v=...',
+  },
+  {
+    platform: 'tiktok',
+    label: 'TikTok',
+    tag: 'No Watermark',
+    dotColor: '#06b6d4',
+    placeholder: 'https://www.tiktok.com/@user/video/...',
+  },
+  {
+    platform: 'instagram',
+    label: 'Instagram',
+    tag: 'Reels & Audio',
+    dotColor: '#ec4899',
+    placeholder: 'https://www.instagram.com/reel/...',
+  },
+  {
+    platform: 'facebook',
+    label: 'Facebook',
+    tag: 'HD Watch',
+    dotColor: '#3b82f6',
+    placeholder: 'https://www.facebook.com/watch/?v=...',
+  },
+];
+
+const DEMO_SAMPLE_URL = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
+
 export default function MediaDownloader() {
   const [url, setUrl] = useState('');
   const [detectedPlatform, setDetectedPlatform] = useState<SupportedPlatform>('unknown');
@@ -347,7 +386,10 @@ export default function MediaDownloader() {
                   value={url}
                   onChange={(e) => handleUrlChange(e.target.value)}
                   onPaste={handlePaste}
-                  placeholder="https://www.youtube.com/watch?v=... or TikTok / Reel link"
+                  placeholder={
+                    PLATFORM_SHOWCASE.find((p) => p.platform === detectedPlatform)?.placeholder ||
+                    'https://www.youtube.com/watch?v=... or TikTok / Reel link'
+                  }
                   className="w-full bg-transparent pl-4 pr-10 py-3.5 text-sm sm:text-base text-white placeholder-zinc-500 focus:outline-none"
                   required
                 />
@@ -389,6 +431,49 @@ export default function MediaDownloader() {
               </Magnet>
             </form>
           </StarBorder>
+
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5 px-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {PLATFORM_SHOWCASE.map((item) => {
+                const isSelected =
+                  (media?.platform || detectedPlatform) === item.platform;
+                return (
+                  <button
+                    key={item.platform}
+                    type="button"
+                    onClick={() => setDetectedPlatform(item.platform)}
+                    className={`group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-white/10 border-white/25 text-white shadow-sm'
+                        : 'bg-white/[0.02] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full transition-transform group-hover:scale-125"
+                      style={{ backgroundColor: item.dotColor }}
+                    />
+                    <span className="font-semibold text-zinc-200">{item.label}</span>
+                    <span className="text-[11px] text-zinc-500 hidden sm:inline">
+                      • {item.tag}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                handleUrlChange(DEMO_SAMPLE_URL);
+                fetchMediaInfo(DEMO_SAMPLE_URL);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              Try 1-Click Demo
+            </button>
+          </div>
 
           <AnimatePresence>
             {error && (
