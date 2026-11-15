@@ -51,6 +51,7 @@ interface CachedStreamEntry extends StreamProxyOptions {
 export class MediaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MediaService.name);
   private readonly tempDir = path.join(process.cwd(), 'temp');
+  private readonly cookiesDir = path.join(process.cwd(), 'cookies');
   private readonly jobStreams = new Map<string, Subject<JobProgress>>();
   private readonly streamCache = new Map<string, CachedStreamEntry>();
   private readonly cacheTtlMs = 20 * 60 * 1000; // 20 minutes
@@ -66,6 +67,8 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
 
+    this.initCookiesDirectory();
+
     // Periodically purge expired stream tokens and stale temp files
     this.cleanupTimer = setInterval(() => {
       this.purgeExpiredTokens();
@@ -80,6 +83,63 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy(): void {
     clearInterval(this.cleanupTimer);
+  }
+
+  initCookiesDirectory(): void {
+    if (!fs.existsSync(this.cookiesDir)) {
+      fs.mkdirSync(this.cookiesDir, { recursive: true });
+    }
+
+    // Hydrate cookies/cookies.txt from Hostinger environment variable if provided
+    if (process.env.COOKIES_BASE64) {
+      try {
+        const decoded = Buffer.from(process.env.COOKIES_BASE64, 'base64').toString('utf-8');
+        const targetPath = path.join(this.cookiesDir, 'cookies.txt');
+        fs.writeFileSync(targetPath, decoded, { mode: 0o600 });
+        this.logger.log('Loaded cookies.txt from COOKIES_BASE64 environment variable.');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Failed to decode COOKIES_BASE64 environment variable: ${msg}`);
+      }
+    }
+  }
+
+  /**
+   * Creates an isolated temporary copy of the cookie file for a single yt-dlp run
+   * so concurrent downloads never corrupt or overwrite your master cookies.txt.
+   */
+  createTempCookieFile(platform: SupportedPlatform): string | null {
+    const platformCookie = path.join(this.cookiesDir, `${platform}.txt`);
+    const globalCookie = path.join(this.cookiesDir, 'cookies.txt');
+
+    const sourcePath = fs.existsSync(platformCookie)
+      ? platformCookie
+      : fs.existsSync(globalCookie)
+        ? globalCookie
+        : null;
+
+    if (!sourcePath) {
+      return null;
+    }
+
+    const tempCookiePath = path.join(
+      this.tempDir,
+      `cookie_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.txt`,
+    );
+    try {
+      fs.copyFileSync(sourcePath, tempCookiePath);
+      return tempCookiePath;
+    } catch {
+      return null;
+    }
+  }
+
+  removeTempCookieFile(tempCookiePath: string | null): void {
+    if (tempCookiePath && fs.existsSync(tempCookiePath)) {
+      try {
+        fs.unlinkSync(tempCookiePath);
+      } catch {}
+    }
   }
 
   private purgeExpiredTokens(): void {
@@ -162,12 +222,17 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     return this.concurrency.run(
       () =>
         new Promise((resolve, reject) => {
+          const tempCookie = this.createTempCookieFile(platform);
           const args = [
             '--dump-single-json',
             '--no-playlist',
             '--no-warnings',
-            url,
           ];
+
+          if (tempCookie) {
+            args.push('--cookies', tempCookie);
+          }
+          args.push(url);
 
           const child = spawn(this.binaryService.ytDlpPath, args, { shell: false });
           let stdout = '';
@@ -177,6 +242,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           const timer = setTimeout(() => {
             if (isDone) return;
             isDone = true;
+            this.removeTempCookieFile(tempCookie);
             try {
               child.kill('SIGKILL');
             } catch {}
@@ -193,6 +259,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             if (isDone) return;
             isDone = true;
             clearTimeout(timer);
+            this.removeTempCookieFile(tempCookie);
 
             if (code !== 0) {
               this.logger.warn(`yt-dlp metadata failed: ${stderr.trim().slice(0, 300)}`);
@@ -225,6 +292,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             if (isDone) return;
             isDone = true;
             clearTimeout(timer);
+            this.removeTempCookieFile(tempCookie);
             this.logger.error(`Spawn error for yt-dlp: ${err.message}`);
             reject(new BadRequestException('Failed to launch extractor process.'));
           });
@@ -315,6 +383,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     jobId?: string,
     abortSignal?: AbortSignal,
   ): Promise<{ filePath: string; filename: string; mimeType: string }> {
+    const platform = detectPlatform(url);
     const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const ext = type === 'audio' ? 'mp3' : 'mp4';
     const outputTemplate = path.join(this.tempDir, `${uniqueId}.%(ext)s`);
@@ -338,6 +407,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     await this.concurrency.run(
       () =>
         new Promise<void>((resolve, reject) => {
+          const tempCookie = this.createTempCookieFile(platform);
           const args = [
             '--no-playlist',
             '--newline',
@@ -348,6 +418,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             '-o',
             outputTemplate,
           ];
+
+          if (tempCookie) {
+            args.push('--cookies', tempCookie);
+          }
 
           if (type === 'audio') {
             args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
@@ -363,6 +437,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           const abortHandler = () => {
             if (isDone) return;
             isDone = true;
+            this.removeTempCookieFile(tempCookie);
             this.logger.log(`Client aborted download job ${uniqueId}; killing child process`);
             try {
               child.kill('SIGKILL');
@@ -382,6 +457,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           const timer = setTimeout(() => {
             if (isDone) return;
             isDone = true;
+            this.removeTempCookieFile(tempCookie);
             try {
               child.kill('SIGKILL');
             } catch {}
@@ -411,6 +487,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             if (isDone) return;
             isDone = true;
             clearTimeout(timer);
+            this.removeTempCookieFile(tempCookie);
             if (abortSignal) {
               abortSignal.removeEventListener('abort', abortHandler);
             }
@@ -432,6 +509,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             if (isDone) return;
             isDone = true;
             clearTimeout(timer);
+            this.removeTempCookieFile(tempCookie);
             cleanupTempArtifacts();
             this.logger.error(`Merge process error: ${err.message}`);
             reject(new BadRequestException('Failed to execute merge process.'));

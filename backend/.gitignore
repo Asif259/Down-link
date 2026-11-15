@@ -2,9 +2,11 @@
 /dist
 /node_modules
 
-# temp media files & binaries
+# temp media files & binaries & cookies
 /temp
 /bin
+/cookies
+*.txt
 *.log
 
 # testing

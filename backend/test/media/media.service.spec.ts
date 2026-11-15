@@ -92,4 +92,42 @@ describe('MediaService', () => {
     service.cleanStaleTempFiles(10); // 10ms threshold: clean immediately
     expect(fs.existsSync(testStaleFile)).toBe(false);
   });
+
+  it('should create and clean ephemeral cookie copies when master cookie exists', () => {
+    const cookiesDir = (service as any).cookiesDir;
+    const masterCookie = path.join(cookiesDir, 'youtube.txt');
+    fs.writeFileSync(masterCookie, '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 1999999999 SID test');
+
+    const tempCookie = service.createTempCookieFile('youtube');
+    expect(tempCookie).toBeDefined();
+    expect(typeof tempCookie).toBe('string');
+    expect(fs.existsSync(tempCookie!)).toBe(true);
+
+    service.removeTempCookieFile(tempCookie);
+    expect(fs.existsSync(tempCookie!)).toBe(false);
+
+    // Clean master test file
+    fs.unlinkSync(masterCookie);
+  });
+
+  it('should return null when no cookie file exists for platform or global', () => {
+    const tempCookie = service.createTempCookieFile('unknown');
+    expect(tempCookie).toBeNull();
+  });
+
+  it('should decode COOKIES_BASE64 env variable into cookies/cookies.txt', () => {
+    const originalEnv = process.env.COOKIES_BASE64;
+    const dummyCookie = '# Netscape Cookie\n.example.com TRUE / FALSE 2000000000 TEST value';
+    process.env.COOKIES_BASE64 = Buffer.from(dummyCookie, 'utf-8').toString('base64');
+
+    service.initCookiesDirectory();
+
+    const targetFile = path.join((service as any).cookiesDir, 'cookies.txt');
+    expect(fs.existsSync(targetFile)).toBe(true);
+    expect(fs.readFileSync(targetFile, 'utf-8')).toBe(dummyCookie);
+
+    // Cleanup
+    fs.unlinkSync(targetFile);
+    process.env.COOKIES_BASE64 = originalEnv;
+  });
 });

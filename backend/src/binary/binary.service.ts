@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
@@ -9,11 +10,12 @@ const ffmpegStatic = require('ffmpeg-static');
 const ffmpegPath: string = ffmpegStatic?.default || ffmpegStatic;
 
 @Injectable()
-export class BinaryService implements OnModuleInit {
+export class BinaryService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BinaryService.name);
   private readonly binDir = path.join(process.cwd(), 'bin');
   private readonly minBinarySizeBytes = 1024 * 1024; // 1MB minimum valid executable size
   private readonly downloadTimeoutMs = 60000; // 60s timeout for binary download
+  private updateTimer?: NodeJS.Timeout;
 
   get ytDlpBinaryName(): string {
     if (process.platform === 'win32') return 'yt-dlp.exe';
@@ -59,6 +61,11 @@ export class BinaryService implements OnModuleInit {
       this.logger.log(`Downloading standalone ${this.ytDlpBinaryName}...`);
       const downloadUrl = `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${this.ytDlpBinaryName}`;
       await this.downloadFile(downloadUrl, this.ytDlpPath);
+    } else {
+      // Check for updates quietly in background on startup without blocking boot
+      this.updateYtDlpBinary().catch((err) =>
+        this.logger.warn(`Startup yt-dlp update check failed: ${err.message}`),
+      );
     }
 
     // Ensure executable permissions on POSIX
@@ -71,7 +78,48 @@ export class BinaryService implements OnModuleInit {
       }
     }
 
+    // Run auto-update every 24 hours
+    this.updateTimer = setInterval(() => {
+      this.updateYtDlpBinary().catch((err) =>
+        this.logger.warn(`Scheduled yt-dlp update failed: ${err.message}`),
+      );
+    }, 24 * 60 * 60 * 1000);
+    this.updateTimer.unref();
+
     this.logger.log('yt-dlp binary is verified and ready.');
+  }
+
+  onModuleDestroy(): void {
+    if (this.updateTimer) {
+      clearInterval(this.updateTimer);
+    }
+  }
+
+  async updateYtDlpBinary(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.logger.log('Checking for yt-dlp updates (-U)...');
+      const child = spawn(this.ytDlpPath, ['-U'], { shell: false });
+      let output = '';
+
+      child.stdout.on('data', (chunk) => (output += chunk.toString()));
+      child.stderr.on('data', (chunk) => (output += chunk.toString()));
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          const summary = output.trim().split('\n').pop() || 'Update check complete.';
+          this.logger.log(`yt-dlp update status: ${summary}`);
+          resolve(summary);
+        } else {
+          this.logger.warn(`yt-dlp -U exited with code ${code}: ${output.trim().slice(0, 200)}`);
+          reject(new Error(`yt-dlp -U exited with code ${code}: ${output}`));
+        }
+      });
+
+      child.on('error', (err) => {
+        this.logger.warn(`Failed to execute yt-dlp -U: ${err.message}`);
+        reject(err);
+      });
+    });
   }
 
   downloadFile(url: string, dest: string): Promise<void> {
