@@ -235,7 +235,7 @@ let MediaService = MediaService_1 = class MediaService {
         }
         return [
             '--extractor-args',
-            'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
+            'youtube:player_client=android,ios;player_skip=webpage,configs',
         ];
     }
     async extractMetadata(url) {

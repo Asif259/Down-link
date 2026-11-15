@@ -288,11 +288,11 @@ describe('MediaService', () => {
       expect(args).toEqual(['--extractor-args', 'youtube:player_client=web,mweb,web_embedded']);
     });
 
-    it('returns android_vr, android, ios and skips webpage/configs when hasCookies is false', () => {
+    it('returns android, ios and skips webpage/configs when hasCookies is false', () => {
       const args = (service as any).getYoutubeExtractorArgs(false);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
+        'youtube:player_client=android,ios;player_skip=webpage,configs',
       ]);
     });
   });
@@ -317,7 +317,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
+          'youtube:player_client=android,ios;player_skip=webpage,configs',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]),
         {
@@ -427,7 +427,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
+          'youtube:player_client=android,ios;player_skip=webpage,configs',
           '--merge-output-format',
           'mp4',
         ]),

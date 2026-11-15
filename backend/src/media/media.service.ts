@@ -301,7 +301,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     }
     return [
       '--extractor-args',
-      'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
+      'youtube:player_client=android,ios;player_skip=webpage,configs',
     ];
   }
 
