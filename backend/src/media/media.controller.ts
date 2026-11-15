@@ -63,9 +63,16 @@ export class MediaController {
 
   // Live SSE progress with LiteSpeed non-buffering headers
   @Sse('progress/:jobId')
-  @Header('Cache-Control', 'no-cache')
-  @Header('X-Accel-Buffering', 'no')
-  streamProgress(@Param('jobId') jobId: string): Observable<MessageEvent> {
+  streamProgress(
+    @Param('jobId') jobId: string,
+    @Res({ passthrough: true }) res?: Response,
+  ): Observable<MessageEvent> {
+    if (res && typeof res.setHeader === 'function') {
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Connection', 'keep-alive');
+    }
+
     return this.mediaService
       .getJobStream(jobId)
       .pipe(map((progress) => ({ data: progress } as MessageEvent)));

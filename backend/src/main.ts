@@ -6,10 +6,22 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+  const allowedOrigins = allowedOriginsEnv
+    ? allowedOriginsEnv.split(',').map((o) => o.trim())
+    : ['http://localhost:3000', 'http://localhost:3001'];
+
   app.enableCors({
-    origin: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like curl, server-to-server) or when wildcard / matched
+      if (!origin || !allowedOriginsEnv || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS policy blocked access from origin: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    credentials: false,
+    exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Range'],
   });
 
   app.useGlobalPipes(
