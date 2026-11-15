@@ -97,4 +97,25 @@ describe('MediaController', () => {
       done();
     });
   });
+
+  it('should have proper throttler configurations applied to routes', () => {
+    const extractLimit = Reflect.getMetadata('THROTTLER:LIMITheavy', MediaController.prototype.extract);
+    const extractTtl = Reflect.getMetadata('THROTTLER:TTLheavy', MediaController.prototype.extract);
+    expect(extractLimit).toBe(10);
+    expect(extractTtl).toBe(60000);
+
+    const downloadLimit = Reflect.getMetadata('THROTTLER:LIMITheavy', MediaController.prototype.download);
+    const downloadTtl = Reflect.getMetadata('THROTTLER:TTLheavy', MediaController.prototype.download);
+    expect(downloadLimit).toBe(4);
+    expect(downloadTtl).toBe(60000);
+
+    const streamDirectLimit = Reflect.getMetadata('THROTTLER:LIMITdefault', MediaController.prototype.streamDirect);
+    expect(streamDirectLimit).toBe(15);
+
+    const healthSkip = Reflect.getMetadata('THROTTLER:SKIPdefault', MediaController.prototype.getHealth);
+    expect(healthSkip).toBe(true);
+
+    const progressSkip = Reflect.getMetadata('THROTTLER:SKIPdefault', MediaController.prototype.streamProgress);
+    expect(progressSkip).toBe(true);
+  });
 });

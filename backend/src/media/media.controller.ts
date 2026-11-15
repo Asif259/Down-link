@@ -12,6 +12,7 @@ import {
   Res,
   Sse,
 } from '@nestjs/common';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import { map, Observable } from 'rxjs';
@@ -30,6 +31,7 @@ export class MediaController {
     private readonly concurrencyService: ConcurrencyService,
   ) {}
 
+  @SkipThrottle()
   @Get('health')
   getHealth() {
     return {
@@ -41,12 +43,14 @@ export class MediaController {
     };
   }
 
+  @Throttle({ heavy: { limit: 10, ttl: 60000 } })
   @Post('extract')
   async extract(@Body() dto: ExtractMediaDto) {
     return this.mediaService.extractMetadata(dto.url);
   }
 
   // Zero-disk Direct CDN Stream Proxy for TikTok, Instagram Reels, and 360p/720p progressive MP4s
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @Get('stream/:token')
   streamDirect(
     @Param('token') token: string,
@@ -61,7 +65,8 @@ export class MediaController {
     this.streamProxyService.pipeFromCdn(streamOptions, req, res);
   }
 
-  // Live SSE progress with LiteSpeed non-buffering headers
+  // Live SSE progress with LiteSpeed non-buffering headers (unthrottled to avoid dropping events)
+  @SkipThrottle()
   @Sse('progress/:jobId')
   streamProgress(
     @Param('jobId') jobId: string,
@@ -79,6 +84,7 @@ export class MediaController {
   }
 
   // Disk-backed FFmpeg merge & MP3 conversion route for 1080p+ DASH & Audio
+  @Throttle({ heavy: { limit: 4, ttl: 60000 } })
   @Get('download')
   async download(
     @Query() query: DownloadQueryDto,

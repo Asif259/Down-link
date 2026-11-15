@@ -15,12 +15,14 @@
     "package:hostinger": "npm run build && zip -r ../backend-deploy.zip dist src package.json package-lock.json tsconfig.json nest-cli.json -x \"*.DS_Store*\"",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
     "@nestjs/core": "^10.4.15",
     "@nestjs/platform-express": "^10.4.15",
+    "@nestjs/throttler": "^6.7.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "ffmpeg-static": "^5.2.0",

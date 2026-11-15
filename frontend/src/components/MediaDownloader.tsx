@@ -13,14 +13,20 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import DownloadHistory from './DownloadHistory';
 import {
   API_BASE_URL,
   CleanFormat,
+  clearAllHistory,
   detectClientPlatform,
   formatBytes,
   formatDuration,
+  HistoryItem,
   JobProgress,
+  loadHistory,
   MediaInfoResponse,
+  removeHistoryItem,
+  saveHistoryItem,
   SupportedPlatform,
 } from '../lib/media';
 
@@ -66,7 +72,13 @@ export default function MediaDownloader() {
   // Tracks active FFmpeg merge / MP3 conversion job
   const [activeFormatId, setActiveFormatId] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  // Load saved history on client mount
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -112,6 +124,16 @@ export default function MediaDownloader() {
       }
 
       setMedia(data);
+      const updatedHistory = saveHistoryItem({
+        url: cleanUrl,
+        platform: data.platform,
+        title: data.title,
+        thumbnail: data.thumbnail,
+        duration: data.duration,
+        uploader: data.uploader,
+      });
+      setHistory(updatedHistory);
+
       const hasVideo = data.formats.some((f: CleanFormat) => f.type === 'video');
       setActiveTab(hasVideo ? 'video' : 'audio');
     } catch (err: unknown) {
@@ -154,6 +176,17 @@ export default function MediaDownloader() {
 
   const handleDownloadClick = (format: CleanFormat) => {
     if (!media) return;
+
+    const updatedHistory = saveHistoryItem({
+      url: url.trim(),
+      platform: media.platform,
+      title: media.title,
+      thumbnail: media.thumbnail,
+      duration: media.duration,
+      uploader: media.uploader,
+      lastFormatLabel: format.label,
+    });
+    setHistory(updatedHistory);
 
     // Path 1: Progressive Stream Proxy (Zero Disk / Instant Start)
     if (!format.needsMerge && format.streamToken) {
@@ -458,6 +491,22 @@ export default function MediaDownloader() {
           </div>
         </div>
       )}
+
+      <DownloadHistory
+        items={history}
+        activeUrl={url}
+        isLoading={loading}
+        onSelect={(selectedUrl) => {
+          handleUrlChange(selectedUrl);
+          fetchMediaInfo(selectedUrl);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onRemove={(id) => setHistory(removeHistoryItem(id))}
+        onClearAll={() => {
+          clearAllHistory();
+          setHistory([]);
+        }}
+      />
     </div>
   );
 }

@@ -157,6 +157,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       const now = Date.now();
       const files = fs.readdirSync(this.tempDir);
       for (const file of files) {
+        if (file === '.gitkeep') continue;
         const filePath = path.join(this.tempDir, file);
         try {
           const stats = fs.statSync(filePath);
