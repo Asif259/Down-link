@@ -349,12 +349,12 @@ let MediaService = MediaService_1 = class MediaService {
         if (hasCookies) {
             return [
                 '--extractor-args',
-                'youtube:player_client=tv,web_creator,mweb,web',
+                'youtube:player_client=android,mweb,web_embedded,tv,web',
             ];
         }
         return [
             '--extractor-args',
-            'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs',
+            'youtube:player_client=android,mweb,web_embedded,android_vr,tv',
         ];
     }
     async extractTikTokFallback(url) {
@@ -481,8 +481,8 @@ let MediaService = MediaService_1 = class MediaService {
         if (platform === 'youtube') {
             const clientArg = youtubeClientArg ||
                 (useCookies
-                    ? 'youtube:player_client=tv,web_creator,mweb,web'
-                    : 'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs');
+                    ? 'youtube:player_client=android,mweb,web_embedded,tv,web'
+                    : 'youtube:player_client=android,mweb,web_embedded,android_vr,tv');
             args.push('--extractor-args', clientArg, '--js-runtimes', 'node');
         }
         if (useCookies && tempCookie) {
@@ -556,13 +556,13 @@ let MediaService = MediaService_1 = class MediaService {
                 const hasCookies = this.hasConfiguredCookies();
                 if (hasCookies) {
                     try {
-                        raw = await this.runYtDlpExtract(cleanUrl, platform, true, 'youtube:player_client=tv,web_creator,mweb,web');
+                        raw = await this.runYtDlpExtract(cleanUrl, platform, true, 'youtube:player_client=android,mweb,web_embedded,tv,web');
                     }
                     catch (err) {
                         firstError = err;
                         this.logger.warn(`YouTube Attempt 1 (with cookies) failed: ${err instanceof Error ? err.message : String(err)}. Retrying without cookies...`);
                         try {
-                            raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs');
+                            raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=android,mweb,web_embedded,android_vr,tv');
                         }
                         catch (err2) {
                             throw err2 || firstError;
@@ -571,13 +571,13 @@ let MediaService = MediaService_1 = class MediaService {
                 }
                 else {
                     try {
-                        raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs');
+                        raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=android,mweb,web_embedded,android_vr,tv');
                     }
                     catch (err) {
                         firstError = err;
                         this.logger.warn(`YouTube Attempt 1 (cookie-free) failed: ${err instanceof Error ? err.message : String(err)}. Retrying with fallback clients...`);
                         try {
-                            raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=mweb,tv,web');
+                            raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=android,mweb,tv');
                         }
                         catch (err2) {
                             throw err2 || firstError;
@@ -795,8 +795,8 @@ let MediaService = MediaService_1 = class MediaService {
             if (platform === 'youtube') {
                 const hasCookies = this.hasConfiguredCookies();
                 const clientArg = hasCookies && tempCookie
-                    ? 'youtube:player_client=tv,web_creator,mweb,web'
-                    : 'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs';
+                    ? 'youtube:player_client=android,mweb,web_embedded,tv,web'
+                    : 'youtube:player_client=android,mweb,web_embedded,android_vr,tv';
                 args.push('--extractor-args', clientArg, '--js-runtimes', 'node');
             }
             if (tempCookie) {
