@@ -11,6 +11,7 @@ backend/cookies/*.txt
 !backend/cookies/.gitkeep
 backend/tmp/
 *.zip
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
