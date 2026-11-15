@@ -247,6 +247,13 @@ describe('MediaService', () => {
   });
 
   describe('formatYtDlpError', () => {
+    it('returns unavailable format warning when requested format is not available', () => {
+      const msg = (service as any).formatYtDlpError(
+        'ERROR: [youtube] 12345: Requested format is not available. Use --list-formats for a list of available formats',
+      );
+      expect(msg).toContain('The requested format is not available');
+    });
+
     it('returns YouTube challenge warning when page needs to be reloaded or unplayable', () => {
       const msg = (service as any).formatYtDlpError('ERROR: [youtube] dQw4w9WgXcQ: The page needs to be reloaded.');
       expect(msg).toContain('YouTube challenged the request format for this server IP');
@@ -283,9 +290,12 @@ describe('MediaService', () => {
   });
 
   describe('getYoutubeExtractorArgs', () => {
-    it('returns web, mweb, and web_embedded client when hasCookies is true', () => {
+    it('returns android, web, mweb client and skips webpage/configs when hasCookies is true', () => {
       const args = (service as any).getYoutubeExtractorArgs(true);
-      expect(args).toEqual(['--extractor-args', 'youtube:player_client=web,mweb,web_embedded']);
+      expect(args).toEqual([
+        '--extractor-args',
+        'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
+      ]);
     });
 
     it('returns android, ios and skips webpage/configs when hasCookies is false', () => {
@@ -343,7 +353,7 @@ describe('MediaService', () => {
       spawnSpy.mockRestore();
     });
 
-    it('spawns yt-dlp with web/embedded player client when cookies exist', async () => {
+    it('spawns yt-dlp with android/web player client when cookies exist', async () => {
       const mockChild = new EventEmitter() as any;
       mockChild.stdout = new EventEmitter();
       mockChild.stderr = new EventEmitter();
@@ -361,7 +371,7 @@ describe('MediaService', () => {
         expect.arrayContaining([
           '--force-ipv4',
           '--extractor-args',
-          'youtube:player_client=web,mweb,web_embedded',
+          'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
           '--cookies',
         ]),
         expect.anything(),

@@ -204,6 +204,9 @@ let MediaService = MediaService_1 = class MediaService {
     }
     formatYtDlpError(stderr) {
         const lower = stderr.toLowerCase();
+        if (lower.includes('requested format is not available')) {
+            return 'The requested format is not available for this media. Please select another quality or option.';
+        }
         if (lower.includes('page needs to be reloaded') || lower.includes('unplayable')) {
             return 'YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.';
         }
@@ -230,7 +233,7 @@ let MediaService = MediaService_1 = class MediaService {
         if (hasCookies) {
             return [
                 '--extractor-args',
-                'youtube:player_client=web,mweb,web_embedded',
+                'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
             ];
         }
         return [
@@ -369,7 +372,7 @@ let MediaService = MediaService_1 = class MediaService {
             }
         }
         clean.push({
-            formatId: 'bestaudio',
+            formatId: 'bestaudio/best',
             label: 'MP3 Audio (High Quality)',
             ext: 'mp3',
             type: 'audio',
@@ -404,6 +407,7 @@ let MediaService = MediaService_1 = class MediaService {
         await this.concurrency.run(() => new Promise((resolve, reject) => {
             const tempCookie = this.createTempCookieFile(platform);
             const cacheDir = path.join(this.tempDir, '.cache');
+            const safeFormatId = formatId === 'bestaudio' ? 'bestaudio/best' : formatId;
             const args = [
                 '--no-playlist',
                 '--newline',
@@ -415,7 +419,7 @@ let MediaService = MediaService_1 = class MediaService {
                 '--no-check-certificates',
                 '--geo-bypass',
                 '-f',
-                formatId,
+                safeFormatId,
                 '-o',
                 outputTemplate,
             ];
@@ -437,6 +441,7 @@ let MediaService = MediaService_1 = class MediaService {
                 env: this.binaryService.spawnEnv,
             });
             let isDone = false;
+            let stderr = '';
             const abortHandler = () => {
                 if (isDone)
                     return;
@@ -485,6 +490,9 @@ let MediaService = MediaService_1 = class MediaService {
                     this.emitProgress(jobId, { status: 'merging', percent: 92 });
                 }
             });
+            child.stderr.on('data', (chunk) => {
+                stderr += chunk.toString();
+            });
             child.on('close', (code) => {
                 if (isDone)
                     return;
@@ -496,12 +504,14 @@ let MediaService = MediaService_1 = class MediaService {
                 }
                 if (code !== 0 || !fs.existsSync(finalPath)) {
                     cleanupTempArtifacts();
+                    const formattedError = this.formatYtDlpError(stderr);
+                    this.logger.warn(`yt-dlp merge failed: ${stderr.trim().slice(0, 300)}`);
                     this.emitProgress(jobId, {
                         status: 'error',
                         percent: 0,
-                        message: 'Media processing failed.',
+                        message: formattedError,
                     });
-                    return reject(new common_1.BadRequestException('Failed to process requested media format.'));
+                    return reject(new common_1.BadRequestException(formattedError));
                 }
                 this.emitProgress(jobId, { status: 'ready', percent: 100 });
                 resolve();

@@ -269,6 +269,9 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
   private formatYtDlpError(stderr: string): string {
     const lower = stderr.toLowerCase();
+    if (lower.includes('requested format is not available')) {
+      return 'The requested format is not available for this media. Please select another quality or option.';
+    }
     if (lower.includes('page needs to be reloaded') || lower.includes('unplayable')) {
       return 'YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.';
     }
@@ -296,7 +299,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     if (hasCookies) {
       return [
         '--extractor-args',
-        'youtube:player_client=web,mweb,web_embedded',
+        'youtube:player_client=android,web,mweb;player_skip=webpage,configs',
       ];
     }
     return [
@@ -470,7 +473,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
     // 3. Universal Audio Extraction Option
     clean.push({
-      formatId: 'bestaudio',
+      formatId: 'bestaudio/best',
       label: 'MP3 Audio (High Quality)',
       ext: 'mp3',
       type: 'audio',
@@ -516,6 +519,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
         new Promise<void>((resolve, reject) => {
           const tempCookie = this.createTempCookieFile(platform);
           const cacheDir = path.join(this.tempDir, '.cache');
+          const safeFormatId = formatId === 'bestaudio' ? 'bestaudio/best' : formatId;
           const args = [
             '--no-playlist',
             '--newline',
@@ -527,7 +531,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             '--no-check-certificates',
             '--geo-bypass',
             '-f',
-            formatId,
+            safeFormatId,
             '-o',
             outputTemplate,
           ];
@@ -553,6 +557,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             env: this.binaryService.spawnEnv,
           });
           let isDone = false;
+          let stderr = '';
 
           const abortHandler = () => {
             if (isDone) return;
@@ -603,6 +608,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             }
           });
 
+          child.stderr.on('data', (chunk) => {
+            stderr += chunk.toString();
+          });
+
           child.on('close', (code) => {
             if (isDone) return;
             isDone = true;
@@ -614,12 +623,14 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
             if (code !== 0 || !fs.existsSync(finalPath)) {
               cleanupTempArtifacts();
+              const formattedError = this.formatYtDlpError(stderr);
+              this.logger.warn(`yt-dlp merge failed: ${stderr.trim().slice(0, 300)}`);
               this.emitProgress(jobId, {
                 status: 'error',
                 percent: 0,
-                message: 'Media processing failed.',
+                message: formattedError,
               });
-              return reject(new BadRequestException('Failed to process requested media format.'));
+              return reject(new BadRequestException(formattedError));
             }
             this.emitProgress(jobId, { status: 'ready', percent: 100 });
             resolve();
