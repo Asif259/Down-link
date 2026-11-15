@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -16,6 +16,13 @@ export const metadata: Metadata = {
   title: 'Down-link | All-in-One Media Downloader',
   description:
     'Download HD videos and MP3 audio from YouTube, Facebook, Instagram, and TikTok with high speed and zero limits.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#030712',
 };
 
 export default function RootLayout({

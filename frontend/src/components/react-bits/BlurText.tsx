@@ -17,7 +17,7 @@ export default function BlurText({
   const words = text.split(' ');
 
   return (
-    <h1 className={`flex flex-wrap justify-center gap-y-1 ${className}`}>
+    <h1 className={`flex flex-wrap justify-center gap-x-2 gap-y-1 sm:gap-x-3 ${className}`}>
       {words.map((word, index) => (
         <motion.span
           key={`${word}-${index}`}
@@ -28,7 +28,7 @@ export default function BlurText({
             delay: index * delay,
             ease: [0.22, 1, 0.36, 1],
           }}
-          className="inline-block mr-2 sm:mr-3 last:mr-0"
+          className="inline-block"
         >
           {word}
         </motion.span>

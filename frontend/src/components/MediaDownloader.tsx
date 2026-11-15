@@ -324,23 +324,23 @@ export default function MediaDownloader() {
 
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#ffffff06_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-24 space-y-10">
-        <header className="text-center space-y-5 max-w-2xl mx-auto">
+      <div className="relative z-10 max-w-4xl mx-auto px-3.5 sm:px-6 pt-10 sm:pt-16 pb-16 sm:pb-24 space-y-8 sm:space-y-10">
+        <header className="text-center space-y-4 sm:space-y-5 max-w-2xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md shadow-inner"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md shadow-inner max-w-full"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <ShinyText
-              text="Zero-Watermark • Instant CDN Stream • 1080p HD Muxer"
-              className="text-xs font-medium tracking-wide"
+              text="Zero-Watermark • Instant Stream • 1080p HD Muxer"
+              className="text-[11px] sm:text-xs font-medium tracking-wide truncate"
             />
           </motion.div>
 
           <BlurText
             text="Download Media From Any Platform in Seconds."
-            className="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-[1.12]"
+            className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white leading-[1.15]"
           />
 
           <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
@@ -354,13 +354,13 @@ export default function MediaDownloader() {
         </header>
 
         <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-300 ${theme.pillClasses}`}
               >
                 <span
-                  className="w-2 h-2 rounded-full animate-pulse"
+                  className="w-2 h-2 rounded-full animate-pulse shrink-0"
                   style={{ backgroundColor: theme.accentHex }}
                 />
                 {theme.name}
@@ -371,9 +371,9 @@ export default function MediaDownloader() {
               type="button"
               onClick={handleClipboardButton}
               aria-label="Paste URL from clipboard"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-white active:bg-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 min-h-[36px] sm:min-h-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-all cursor-pointer"
             >
-              <ClipboardPaste className="w-3.5 h-3.5 text-emerald-400" />
+              <ClipboardPaste className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               Paste from Clipboard
             </button>
           </div>
@@ -384,7 +384,7 @@ export default function MediaDownloader() {
                 e.preventDefault();
                 fetchMediaInfo(url);
               }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 sm:p-2.5"
             >
               <div className="relative flex-1 flex items-center">
                 <input
@@ -398,7 +398,7 @@ export default function MediaDownloader() {
                     PLATFORM_SHOWCASE.find((p) => p.platform === detectedPlatform)?.placeholder ||
                     'https://www.youtube.com/watch?v=... or TikTok / Reel link'
                   }
-                  className="w-full bg-transparent pl-4 pr-10 py-3.5 text-sm sm:text-base text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 rounded-xl"
+                  className="w-full bg-transparent pl-3.5 sm:pl-4 pr-11 py-3 sm:py-3.5 text-base text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 rounded-xl"
                   required
                 />
                 {url && (
@@ -411,19 +411,19 @@ export default function MediaDownloader() {
                       setError(null);
                     }}
                     aria-label="Clear URL input"
-                    className="absolute right-3 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer"
+                    className="absolute right-2 sm:right-3 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 active:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
 
-              <Magnet strength={0.18} disabled={loading || !url.trim()}>
+              <Magnet strength={0.18} disabled={loading || !url.trim()} className="w-full sm:w-auto">
                 <button
                   type="submit"
                   disabled={loading || !url.trim()}
                   aria-label={loading ? 'Extracting media streams...' : 'Extract media streams'}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r ${theme.buttonClasses} hover:brightness-110 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:shadow-none text-white font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer`}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r ${theme.buttonClasses} hover:brightness-110 active:brightness-95 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:shadow-none text-white font-semibold text-sm px-6 sm:px-7 py-3.5 min-h-[48px] rounded-xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer`}
                 >
                   {loading ? (
                     <>
@@ -441,8 +441,8 @@ export default function MediaDownloader() {
             </form>
           </StarBorder>
 
-          <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5 px-1">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {PLATFORM_SHOWCASE.map((item) => {
                 const isSelected =
                   (media?.platform || detectedPlatform) === item.platform;
@@ -453,18 +453,18 @@ export default function MediaDownloader() {
                     onClick={() => setDetectedPlatform(item.platform)}
                     aria-label={`Select ${item.label} platform`}
                     aria-pressed={isSelected}
-                    className={`group inline-flex items-center gap-2 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer ${
+                    className={`group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-white/10 border-white/25 text-white shadow-sm'
                         : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.05]'
                     }`}
                   >
                     <span
-                      className="w-2 h-2 rounded-full transition-transform group-hover:scale-125"
+                      className="w-2 h-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
                       style={{ backgroundColor: item.dotColor }}
                     />
                     <span className="font-semibold text-zinc-100">{item.label}</span>
-                    <span className="text-[11px] text-zinc-400 hidden sm:inline">
+                    <span className="text-[11px] text-zinc-400 hidden md:inline">
                       • {item.tag}
                     </span>
                   </button>
@@ -480,9 +480,9 @@ export default function MediaDownloader() {
                 fetchMediaInfo(DEMO_SAMPLE_URL);
               }}
               aria-label="Try 1-Click Demo with sample YouTube video"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 active:bg-emerald-500/30 text-emerald-300 border border-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer disabled:opacity-50"
             >
-              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               Try 1-Click Demo
             </button>
           </div>
@@ -544,8 +544,8 @@ export default function MediaDownloader() {
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-5"
             >
-              <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-5 sm:p-6">
-                <div className="flex flex-col md:flex-row gap-6 items-start">
+              <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-4 sm:p-6">
+                <div className="flex flex-col md:flex-row gap-5 sm:gap-6 items-start">
                   <div className="relative w-full md:w-64 aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 shrink-0 group shadow-2xl">
                     {media.thumbnail ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
@@ -569,19 +569,19 @@ export default function MediaDownloader() {
                   </div>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between space-y-4 w-full">
-                    <div className="space-y-2">
+                    <div className="space-y-2 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${theme.pillClasses}`}
                         >
                           {PLATFORM_THEMES[media.platform].name.replace(' Engine', '')}
                         </span>
-                        <span className="text-xs text-zinc-400 font-medium truncate">
+                        <span className="text-xs text-zinc-400 font-medium truncate max-w-[200px] sm:max-w-none">
                           by {media.uploader}
                         </span>
                       </div>
 
-                      <h2 className="text-lg sm:text-xl font-bold text-white line-clamp-2 leading-snug">
+                      <h2 className="text-base sm:text-xl font-bold text-white line-clamp-2 leading-snug break-words">
                         {media.title}
                       </h2>
                     </div>
@@ -589,7 +589,7 @@ export default function MediaDownloader() {
                     <div
                       role="tablist"
                       aria-label="Media format categories"
-                      className="inline-flex p-1 rounded-xl bg-zinc-950/90 border border-white/10 w-fit"
+                      className="grid grid-cols-2 sm:inline-flex p-1 rounded-xl bg-zinc-950/90 border border-white/10 w-full sm:w-fit"
                     >
                       {(['video', 'audio'] as const).map((tab) => {
                         const isActive = activeTab === tab;
@@ -600,7 +600,7 @@ export default function MediaDownloader() {
                             role="tab"
                             aria-selected={isActive}
                             onClick={() => setActiveTab(tab)}
-                            className={`relative inline-flex items-center gap-2 px-5 py-2 min-h-[38px] rounded-lg text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer ${
+                            className={`relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] rounded-lg text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer ${
                               isActive ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
                             }`}
                           >
@@ -611,16 +611,16 @@ export default function MediaDownloader() {
                                 className={`absolute inset-0 rounded-lg bg-gradient-to-r ${theme.buttonClasses}`}
                               />
                             )}
-                            <span className="relative z-10 inline-flex items-center gap-2">
+                            <span className="relative z-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 truncate">
                               {tab === 'video' ? (
                                 <>
-                                  <Film className="w-3.5 h-3.5" />
-                                  Video Formats (MP4)
+                                  <Film className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">Video (MP4)</span>
                                 </>
                               ) : (
                                 <>
-                                  <Music className="w-3.5 h-3.5" />
-                                  Audio Extraction (MP3)
+                                  <Music className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">Audio (MP3)</span>
                                 </>
                               )}
                             </span>
@@ -673,7 +673,7 @@ export default function MediaDownloader() {
                 </AnimatePresence>
               </SpotlightCard>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
                 {filteredFormats.map((format, idx) => {
                   const sizeText = formatBytes(format.filesizeApprox);
                   const isProcessing = activeFormatId === format.formatId;
@@ -692,29 +692,29 @@ export default function MediaDownloader() {
                         spotlightColor={theme.spotlightRgba}
                         onClick={() => !activeFormatId && handleDownloadClick(format)}
                         aria-label={`Download ${format.label} ${format.ext.toUpperCase()}${sizeText ? `, approx ${sizeText}` : ''}`}
-                        className={`w-full p-4 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none ${
+                        className={`w-full p-3.5 sm:p-4 min-h-[72px] cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none transition-transform ${
                           activeFormatId && !isProcessing ? 'opacity-50 pointer-events-none' : ''
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm sm:text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
+                        <div className="flex items-center justify-between gap-3 sm:gap-4">
+                          <div className="space-y-1 sm:space-y-1.5 min-w-0 text-left">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm sm:text-base font-bold text-white group-hover:text-emerald-300 transition-colors truncate">
                                 {format.label}
                               </span>
                               {!format.needsMerge ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
                                   <Zap className="w-3 h-3" />
                                   Instant
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-zinc-300 border border-white/10">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-zinc-300 border border-white/10 shrink-0">
                                   HD Mux
                                 </span>
                               )}
                             </div>
 
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-xs text-zinc-400 truncate">
                               {format.ext.toUpperCase()}
                               {sizeText ? ` • ~${sizeText}` : ''}
                               {format.needsMerge
@@ -724,7 +724,7 @@ export default function MediaDownloader() {
                           </div>
 
                           <div
-                            className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 group-hover:border-transparent group-hover:bg-gradient-to-br ${theme.buttonClasses} flex items-center justify-center text-zinc-300 group-hover:text-white transition-all duration-300 shrink-0 shadow-inner`}
+                            className={`w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 group-hover:border-transparent group-hover:bg-gradient-to-br ${theme.buttonClasses} flex items-center justify-center text-zinc-300 group-hover:text-white transition-all duration-300 shrink-0 shadow-inner`}
                           >
                             {isProcessing ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
