@@ -30,25 +30,13 @@ let MediaController = class MediaController {
         this.concurrencyService = concurrencyService;
     }
     getHealth() {
-        const cookiesPath = `${process.cwd()}/cookies/cookies.txt`;
-        const hasCookies = fs.existsSync(cookiesPath);
-        let cookieBytes = 0;
-        if (hasCookies) {
-            try {
-                cookieBytes = fs.statSync(cookiesPath).size;
-            }
-            catch { }
-        }
         return {
             status: 'ok',
             timestamp: new Date().toISOString(),
             uptimeSeconds: Math.floor(process.uptime()),
             concurrency: this.concurrencyService.getStatus(),
             ytDlpPath: this.binaryService.ytDlpPath,
-            cookies: {
-                configured: hasCookies && cookieBytes > 10,
-                bytes: cookieBytes,
-            },
+            cookies: this.mediaService.getCookieStats(),
         };
     }
     async extract(dto) {

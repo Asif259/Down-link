@@ -40,6 +40,10 @@ describe('MediaController', () => {
         success: true,
         message: 'yt-dlp is up to date (2026.10.26)',
       }),
+      getCookieStats: jest.fn().mockReturnValue({
+        configured: false,
+        bytes: 0,
+      }),
     };
 
     streamProxyService = {

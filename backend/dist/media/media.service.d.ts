@@ -33,6 +33,8 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     private readonly logger;
     private readonly tempDir;
     private readonly cookiesDir;
+    private readonly persistentCookiesDir;
+    private readonly persistentCookiesPath;
     private readonly jobStreams;
     private readonly streamCache;
     private readonly cacheTtlMs;
@@ -42,6 +44,12 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     constructor(binaryService: BinaryService, concurrency: ConcurrencyService);
     onModuleInit(): void;
     onModuleDestroy(): void;
+    getMasterCookiePath(): string | null;
+    hasConfiguredCookies(): boolean;
+    getCookieStats(): {
+        configured: boolean;
+        bytes: number;
+    };
     initCookiesDirectory(): void;
     createTempCookieFile(platform: SupportedPlatform): string | null;
     removeTempCookieFile(tempCookiePath: string | null): void;
@@ -63,6 +71,7 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     private formatYtDlpError;
     private normalizeMediaUrl;
     private getYoutubeExtractorArgs;
+    private extractTikTokFallback;
     private runYtDlpExtract;
     extractMetadata(url: string): Promise<MediaInfoResponse>;
     private normalizeFormats;

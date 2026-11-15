@@ -5,6 +5,7 @@ import { ConcurrencyService } from '../../src/common/concurrency.service';
 import * as childProcess from 'child_process';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 describe('MediaService', () => {
@@ -23,6 +24,10 @@ describe('MediaService', () => {
     if (fs.existsSync(ytCookie)) {
       try { fs.unlinkSync(ytCookie); } catch {}
     }
+    const persistentCookie = path.join(os.homedir(), '.downlink', 'cookies.txt');
+    if (fs.existsSync(persistentCookie)) {
+      try { fs.unlinkSync(persistentCookie); } catch {}
+    }
     binaryService = new BinaryService();
     concurrencyService = new ConcurrencyService();
     service = new MediaService(binaryService, concurrencyService);
@@ -39,6 +44,10 @@ describe('MediaService', () => {
     const ytCookie = path.join(cookiesDir, 'youtube.txt');
     if (fs.existsSync(ytCookie)) {
       try { fs.unlinkSync(ytCookie); } catch {}
+    }
+    const persistentCookie = path.join(os.homedir(), '.downlink', 'cookies.txt');
+    if (fs.existsSync(persistentCookie)) {
+      try { fs.unlinkSync(persistentCookie); } catch {}
     }
   });
 
@@ -325,7 +334,7 @@ describe('MediaService', () => {
       const args = (service as any).getYoutubeExtractorArgs(true);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=tv,web,mweb',
+        'youtube:player_client=tv,web_creator,mweb,web',
       ]);
     });
 
@@ -333,7 +342,7 @@ describe('MediaService', () => {
       const args = (service as any).getYoutubeExtractorArgs(false);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=ios,android_vr,mweb',
+        'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs',
       ]);
     });
   });
@@ -357,7 +366,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=ios,android_vr,tv',
+          'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs',
           '--js-runtimes',
           'node',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -385,7 +394,7 @@ describe('MediaService', () => {
       spawnSpy.mockRestore();
     });
 
-    it('retries with cookies and fallback player client when attempt 1 fails on YouTube', async () => {
+    it('retries without cookies and fallback player client when attempt 1 (with cookies) fails on YouTube', async () => {
       const cookiesDir = (service as any).cookiesDir;
       const masterCookie = path.join(cookiesDir, 'cookies.txt');
       fs.writeFileSync(masterCookie, '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 1999999999 SID test');
@@ -423,8 +432,7 @@ describe('MediaService', () => {
         binaryService.ytDlpPath,
         expect.arrayContaining([
           '--extractor-args',
-          'youtube:player_client=tv,mweb,web',
-          '--cookies',
+          'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs',
         ]),
         expect.anything(),
       );
@@ -518,7 +526,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=ios,android_vr,tv',
+          'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs',
           '--js-runtimes',
           'node',
           '--merge-output-format',
@@ -544,6 +552,44 @@ describe('MediaService', () => {
         fs.unlinkSync(finalExpectedPath);
       }
       spawnSpy.mockRestore();
+    });
+
+    it('falls back to extractTikTokFallback when yt-dlp fails on TikTok', async () => {
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockImplementation(() => {
+        const child = new EventEmitter() as any;
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        process.nextTick(() => {
+          child.stderr.emit('data', Buffer.from('ERROR: Unexpected response from webpage request\n'));
+          child.emit('close', 1);
+        });
+        return child;
+      });
+
+      const fallbackMock = jest.spyOn(service as any, 'extractTikTokFallback').mockResolvedValue({
+        platform: 'tiktok',
+        title: 'Fallback TikTok Video',
+        thumbnail: 'https://example.com/thumb.jpg',
+        duration: 15,
+        uploader: 'TikTokCreator',
+        formats: [
+          {
+            formatId: 'tiktok-hd',
+            label: '1080p HD (No Watermark)',
+            ext: 'mp4',
+            type: 'video',
+            resolution: '1080p',
+            needsMerge: false,
+          },
+        ],
+      });
+
+      const res = await service.extractMetadata('https://www.tiktok.com/@tiktok/video/7106594312292453675');
+      expect(res.title).toBe('Fallback TikTok Video');
+      expect(fallbackMock).toHaveBeenCalled();
+
+      spawnSpy.mockRestore();
+      fallbackMock.mockRestore();
     });
   });
 });
