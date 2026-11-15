@@ -238,122 +238,230 @@ let MediaService = MediaService_1 = class MediaService {
         }
         return 'Could not fetch media details. The post may be private or removed.';
     }
+    normalizeMediaUrl(rawUrl, platform) {
+        const trimmed = (rawUrl || '').trim();
+        if (platform !== 'youtube') {
+            return trimmed;
+        }
+        try {
+            const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+            const parsed = new URL(normalized);
+            const host = parsed.hostname.toLowerCase();
+            let videoId = null;
+            if (/(^|\.)youtu\.be$/i.test(host)) {
+                const parts = parsed.pathname.split('/').filter(Boolean);
+                if (parts.length > 0) {
+                    videoId = parts[0];
+                }
+            }
+            else if (/(^|\.)youtube\.com$/i.test(host)) {
+                if (parsed.pathname.startsWith('/shorts/') ||
+                    parsed.pathname.startsWith('/live/') ||
+                    parsed.pathname.startsWith('/embed/')) {
+                    const parts = parsed.pathname.split('/').filter(Boolean);
+                    if (parts.length > 1) {
+                        videoId = parts[1];
+                    }
+                }
+                else if (parsed.searchParams.has('v')) {
+                    videoId = parsed.searchParams.get('v');
+                }
+            }
+            if (videoId) {
+                return `https://www.youtube.com/watch?v=${videoId}`;
+            }
+            parsed.searchParams.delete('list');
+            parsed.searchParams.delete('index');
+            parsed.searchParams.delete('start_radio');
+            parsed.searchParams.delete('si');
+            parsed.searchParams.delete('pp');
+            return parsed.toString();
+        }
+        catch {
+            return trimmed;
+        }
+    }
     getYoutubeExtractorArgs(hasCookies) {
         if (hasCookies) {
             return [
                 '--extractor-args',
-                'youtube:player_client=mweb,web_embedded,android,web',
+                'youtube:player_client=tv,web,mweb',
             ];
         }
         return [
             '--extractor-args',
-            'youtube:player_client=mweb,web_embedded,android',
+            'youtube:player_client=ios,android_vr,mweb',
         ];
+    }
+    async runYtDlpExtract(targetUrl, platform, useCookies, youtubeClientArg) {
+        const tempCookie = useCookies ? this.createTempCookieFile(platform) : null;
+        const cacheDir = path.join(this.tempDir, '.cache');
+        const args = [
+            '--dump-single-json',
+            '--no-playlist',
+            '--no-warnings',
+            '--no-check-certificates',
+            '--geo-bypass',
+            '--socket-timeout',
+            '20',
+            '--cache-dir',
+            cacheDir,
+            '--ffmpeg-location',
+            this.binaryService.ffmpegBinaryPath,
+        ];
+        if (platform === 'youtube') {
+            const clientArg = youtubeClientArg ||
+                (useCookies
+                    ? 'youtube:player_client=tv,web,mweb'
+                    : 'youtube:player_client=ios,android_vr,mweb');
+            args.push('--extractor-args', clientArg, '--js-runtimes', 'node');
+        }
+        if (useCookies && tempCookie) {
+            args.push('--cookies', tempCookie);
+        }
+        args.push(targetUrl);
+        try {
+            return await new Promise((resolve, reject) => {
+                const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, {
+                    shell: false,
+                    env: this.binaryService.spawnEnv,
+                });
+                let stdout = '';
+                let stderr = '';
+                let isDone = false;
+                const timer = setTimeout(() => {
+                    if (isDone)
+                        return;
+                    isDone = true;
+                    try {
+                        child.kill('SIGKILL');
+                    }
+                    catch { }
+                    this.logger.warn(`yt-dlp metadata extraction timed out after ${this.extractTimeoutMs}ms for ${targetUrl}`);
+                    reject(new common_1.GatewayTimeoutException('Media analysis timed out. The platform may be throttling requests.'));
+                }, this.extractTimeoutMs);
+                child.stdout.on('data', (chunk) => (stdout += chunk.toString()));
+                child.stderr.on('data', (chunk) => (stderr += chunk.toString()));
+                child.on('close', (code) => {
+                    if (isDone)
+                        return;
+                    isDone = true;
+                    clearTimeout(timer);
+                    if (code !== 0) {
+                        this.logger.warn(`yt-dlp metadata failed: ${stderr.trim().slice(0, 300)}`);
+                        return reject(new common_1.BadRequestException(this.formatYtDlpError(stderr)));
+                    }
+                    try {
+                        const raw = JSON.parse(stdout);
+                        resolve(raw);
+                    }
+                    catch {
+                        reject(new common_1.BadRequestException('Failed to parse media metadata from upstream source.'));
+                    }
+                });
+                child.on('error', (err) => {
+                    if (isDone)
+                        return;
+                    isDone = true;
+                    clearTimeout(timer);
+                    this.logger.error(`Spawn error for yt-dlp: ${err.message}`);
+                    reject(new common_1.BadRequestException('Failed to launch extractor process.'));
+                });
+            });
+        }
+        finally {
+            this.removeTempCookieFile(tempCookie);
+        }
     }
     async extractMetadata(url) {
         const platform = (0, platform_util_1.detectPlatform)(url);
         if (platform === 'unknown') {
             throw new common_1.BadRequestException('Unsupported link. Please provide a YouTube, Facebook, Instagram, or TikTok URL.');
         }
-        return this.concurrency.run(() => new Promise((resolve, reject) => {
-            const tempCookie = this.createTempCookieFile(platform);
-            const cacheDir = path.join(this.tempDir, '.cache');
-            const args = [
-                '--dump-single-json',
-                '--no-playlist',
-                '--no-warnings',
-                '--force-ipv4',
-                '--cache-dir',
-                cacheDir,
-                '--no-check-certificates',
-                '--geo-bypass',
-            ];
+        const cleanUrl = this.normalizeMediaUrl(url, platform);
+        const hasCookiesAvailable = Boolean(this.createTempCookieFile(platform));
+        return this.concurrency.run(async () => {
+            let raw;
+            let firstError;
             if (platform === 'youtube') {
-                args.push(...this.getYoutubeExtractorArgs(Boolean(tempCookie)));
-            }
-            if (tempCookie) {
-                args.push('--cookies', tempCookie);
-            }
-            args.push(url);
-            const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, {
-                shell: false,
-                env: this.binaryService.spawnEnv,
-            });
-            let stdout = '';
-            let stderr = '';
-            let isDone = false;
-            const timer = setTimeout(() => {
-                if (isDone)
-                    return;
-                isDone = true;
-                this.removeTempCookieFile(tempCookie);
                 try {
-                    child.kill('SIGKILL');
+                    raw = await this.runYtDlpExtract(cleanUrl, platform, false, 'youtube:player_client=ios,android_vr,tv');
                 }
-                catch { }
-                this.logger.warn(`yt-dlp metadata extraction timed out after ${this.extractTimeoutMs}ms for ${url}`);
-                reject(new common_1.GatewayTimeoutException('Media analysis timed out. The platform may be throttling requests.'));
-            }, this.extractTimeoutMs);
-            child.stdout.on('data', (chunk) => (stdout += chunk.toString()));
-            child.stderr.on('data', (chunk) => (stderr += chunk.toString()));
-            child.on('close', (code) => {
-                if (isDone)
-                    return;
-                isDone = true;
-                clearTimeout(timer);
-                this.removeTempCookieFile(tempCookie);
-                if (code !== 0) {
-                    this.logger.warn(`yt-dlp metadata failed: ${stderr.trim().slice(0, 300)}`);
-                    return reject(new common_1.BadRequestException(this.formatYtDlpError(stderr)));
+                catch (err) {
+                    firstError = err;
+                    this.logger.warn(`YouTube Attempt 1 (cookie-free) failed: ${err instanceof Error ? err.message : String(err)}. Retrying with fallback client...`);
+                    const useCookiesAttempt2 = hasCookiesAvailable;
+                    const fallbackClient = useCookiesAttempt2
+                        ? 'youtube:player_client=tv,mweb,web'
+                        : 'youtube:player_client=mweb,web,tv';
+                    try {
+                        raw = await this.runYtDlpExtract(cleanUrl, platform, useCookiesAttempt2, fallbackClient);
+                    }
+                    catch (err2) {
+                        throw err2 || firstError;
+                    }
                 }
+            }
+            else {
+                const tryCookiesFirst = hasCookiesAvailable;
                 try {
-                    const raw = JSON.parse(stdout);
-                    const title = raw.title || 'Untitled Media';
-                    resolve({
-                        platform,
-                        title,
-                        thumbnail: raw.thumbnail || '',
-                        duration: raw.duration || 0,
-                        uploader: raw.uploader || raw.channel || 'Unknown',
-                        formats: this.normalizeFormats(raw.formats || [], raw.http_headers || {}, title, platform),
-                    });
+                    raw = await this.runYtDlpExtract(cleanUrl, platform, tryCookiesFirst);
                 }
-                catch {
-                    reject(new common_1.BadRequestException('Failed to parse media metadata from upstream source.'));
+                catch (err) {
+                    firstError = err;
+                    if (tryCookiesFirst) {
+                        this.logger.warn(`${platform} Attempt 1 (with cookies) failed. Retrying without cookies...`);
+                        try {
+                            raw = await this.runYtDlpExtract(cleanUrl, platform, false);
+                        }
+                        catch (err2) {
+                            throw err2 || firstError;
+                        }
+                    }
+                    else {
+                        throw err;
+                    }
                 }
-            });
-            child.on('error', (err) => {
-                if (isDone)
-                    return;
-                isDone = true;
-                clearTimeout(timer);
-                this.removeTempCookieFile(tempCookie);
-                this.logger.error(`Spawn error for yt-dlp: ${err.message}`);
-                reject(new common_1.BadRequestException('Failed to launch extractor process.'));
-            });
-        }));
+            }
+            const title = raw.title || 'Untitled Media';
+            return {
+                platform,
+                title,
+                thumbnail: raw.thumbnail || '',
+                duration: raw.duration || 0,
+                uploader: raw.uploader || raw.channel || 'Unknown',
+                formats: this.normalizeFormats(raw.formats || [], raw.http_headers || {}, title, platform, raw),
+            };
+        });
     }
-    normalizeFormats(rawFormats, globalHeaders, title, platform) {
+    normalizeFormats(rawFormats, globalHeaders, title, platform, raw) {
         const clean = [];
-        const seenHeights = new Set();
-        for (const f of rawFormats) {
-            if (f.vcodec !== 'none' && f.acodec !== 'none' && f.height && f.url) {
-                if (!seenHeights.has(f.height)) {
-                    seenHeights.add(f.height);
+        const seenKeys = new Set();
+        for (const f of rawFormats || []) {
+            const isProgressive = f.vcodec !== 'none' && f.acodec !== 'none' && Boolean(f.url);
+            if (isProgressive) {
+                const height = f.height ? Number(f.height) : null;
+                const resolution = height ? `${height}p` : f.format_note || f.resolution || 'HD Video';
+                const key = height ? `height_${height}` : `fmt_${f.format_id || resolution}`;
+                if (!seenKeys.has(key)) {
+                    seenKeys.add(key);
                     const token = crypto.randomBytes(16).toString('hex');
+                    const ext = f.ext || 'mp4';
                     this.streamCache.set(token, {
                         targetUrl: f.url,
                         headers: { ...globalHeaders, ...(f.http_headers || {}) },
-                        filename: this.sanitizeFilename(title, 'mp4'),
-                        mimeType: 'video/mp4',
+                        filename: this.sanitizeFilename(title, ext),
+                        mimeType: ext === 'webm' ? 'video/webm' : 'video/mp4',
                         expiresAt: Date.now() + this.cacheTtlMs,
                     });
                     clean.push({
                         formatId: String(f.format_id),
-                        label: `${f.height}p MP4 (Instant Stream)`,
-                        ext: 'mp4',
+                        label: height
+                            ? `${height}p ${ext.toUpperCase()} (Instant Stream)`
+                            : `${resolution} ${ext.toUpperCase()} (Instant Stream)`,
+                        ext,
                         type: 'video',
-                        resolution: `${f.height}p`,
+                        resolution,
                         filesizeApprox: f.filesize || f.filesize_approx,
                         needsMerge: false,
                         streamToken: token,
@@ -361,12 +469,34 @@ let MediaService = MediaService_1 = class MediaService {
                 }
             }
         }
+        if (clean.filter((f) => f.type === 'video').length === 0 && raw?.url) {
+            const token = crypto.randomBytes(16).toString('hex');
+            const ext = raw.ext || 'mp4';
+            this.streamCache.set(token, {
+                targetUrl: raw.url,
+                headers: { ...globalHeaders, ...(raw.http_headers || {}) },
+                filename: this.sanitizeFilename(title, ext),
+                mimeType: ext === 'webm' ? 'video/webm' : 'video/mp4',
+                expiresAt: Date.now() + this.cacheTtlMs,
+            });
+            clean.push({
+                formatId: String(raw.format_id || 'direct'),
+                label: 'HD Video (Instant Stream)',
+                ext,
+                type: 'video',
+                resolution: raw.height ? `${raw.height}p` : 'HD Video',
+                filesizeApprox: raw.filesize || raw.filesize_approx,
+                needsMerge: false,
+                streamToken: token,
+            });
+        }
         if (platform === 'youtube' || platform === 'facebook') {
+            const existingHeights = new Set(clean.map((c) => parseInt(c.resolution || '0', 10)).filter(Boolean));
             for (const targetHeight of [1080, 720, 480]) {
-                if (!seenHeights.has(targetHeight)) {
-                    const match = rawFormats.find((f) => f.vcodec !== 'none' && f.acodec === 'none' && f.height === targetHeight);
+                if (!existingHeights.has(targetHeight)) {
+                    const match = (rawFormats || []).find((f) => f.vcodec !== 'none' && f.acodec === 'none' && f.height === targetHeight);
                     if (match) {
-                        seenHeights.add(targetHeight);
+                        existingHeights.add(targetHeight);
                         clean.push({
                             formatId: `${match.format_id}+bestaudio[ext=m4a]/best`,
                             label: `${targetHeight}p HD MP4`,
@@ -380,6 +510,17 @@ let MediaService = MediaService_1 = class MediaService {
                 }
             }
         }
+        const hasMergedVideo = clean.some((f) => f.type === 'video' && f.needsMerge);
+        if (!hasMergedVideo) {
+            clean.push({
+                formatId: 'bestvideo+bestaudio/best',
+                label: 'HD Video (Best Quality)',
+                ext: 'mp4',
+                type: 'video',
+                resolution: 'HD',
+                needsMerge: true,
+            });
+        }
         clean.push({
             formatId: 'bestaudio/best',
             label: 'MP3 Audio (High Quality)',
@@ -390,11 +531,14 @@ let MediaService = MediaService_1 = class MediaService {
         return clean.sort((a, b) => {
             if (a.type !== b.type)
                 return a.type === 'video' ? -1 : 1;
-            return parseInt(b.resolution || '0', 10) - parseInt(a.resolution || '0', 10);
+            const resA = parseInt(a.resolution || '0', 10) || (a.needsMerge ? 1080 : 720);
+            const resB = parseInt(b.resolution || '0', 10) || (b.needsMerge ? 1080 : 720);
+            return resB - resA;
         });
     }
     async prepareMergedFile(url, formatId, type, jobId, abortSignal) {
         const platform = (0, platform_util_1.detectPlatform)(url);
+        const cleanUrl = this.normalizeMediaUrl(url, platform);
         const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const ext = type === 'audio' ? 'mp3' : 'mp4';
         const outputTemplate = path.join(this.tempDir, `${uniqueId}.%(ext)s`);
@@ -442,7 +586,10 @@ let MediaService = MediaService_1 = class MediaService {
                 outputTemplate,
             ];
             if (platform === 'youtube') {
-                args.push(...this.getYoutubeExtractorArgs(Boolean(tempCookie)));
+                const clientArg = tempCookie
+                    ? 'youtube:player_client=tv,mweb,web'
+                    : 'youtube:player_client=ios,android_vr,tv';
+                args.push('--extractor-args', clientArg, '--js-runtimes', 'node');
             }
             if (tempCookie) {
                 args.push('--cookies', tempCookie);
@@ -453,7 +600,7 @@ let MediaService = MediaService_1 = class MediaService {
             else {
                 args.push('--merge-output-format', 'mp4');
             }
-            args.push(url);
+            args.push(cleanUrl);
             const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, {
                 shell: false,
                 env: this.binaryService.spawnEnv,

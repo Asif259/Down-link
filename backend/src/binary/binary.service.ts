@@ -23,8 +23,15 @@ export class BinaryService implements OnModuleInit, OnModuleDestroy {
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
+    const nodeDir = path.dirname(process.execPath);
+    const currentPath = process.env.PATH || '/usr/local/bin:/usr/bin:/bin';
+    const updatedPath = currentPath.includes(nodeDir)
+      ? currentPath
+      : `${nodeDir}:${currentPath}`;
+
     return {
       ...process.env,
+      PATH: updatedPath,
       TMPDIR: tempDir,
       TEMP: tempDir,
       TMP: tempDir,

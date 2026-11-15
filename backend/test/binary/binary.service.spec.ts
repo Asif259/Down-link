@@ -68,12 +68,13 @@ describe('BinaryService', () => {
     downloadSpy.mockRestore();
   });
 
-  it('should provide spawnEnv with TMPDIR, TEMP, and TMP pointing to temp directory', () => {
+  it('should provide spawnEnv with TMPDIR, TEMP, and TMP pointing to temp directory and PATH containing Node binary dir', () => {
     const env = service.spawnEnv;
     const expectedTemp = path.join(process.cwd(), 'temp');
     expect(env.TMPDIR).toBe(expectedTemp);
     expect(env.TEMP).toBe(expectedTemp);
     expect(env.TMP).toBe(expectedTemp);
+    expect(env.PATH).toContain(path.dirname(process.execPath));
     expect(fs.existsSync(expectedTemp)).toBe(true);
   });
 

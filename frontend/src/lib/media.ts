@@ -49,10 +49,10 @@ export function detectClientPlatform(rawUrl: string): SupportedPlatform {
     const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     const host = new URL(normalized).hostname.toLowerCase();
 
-    if (host.includes('youtube.com') || host.includes('youtu.be')) return 'youtube';
-    if (host.includes('facebook.com') || host.includes('fb.watch')) return 'facebook';
-    if (host.includes('instagram.com')) return 'instagram';
-    if (host.includes('tiktok.com')) return 'tiktok';
+    if (/(^|\.)youtube\.com$/i.test(host) || /(^|\.)youtu\.be$/i.test(host)) return 'youtube';
+    if (/(^|\.)facebook\.com$/i.test(host) || /(^|\.)fb\.watch$/i.test(host) || /(^|\.)fb\.com$/i.test(host)) return 'facebook';
+    if (/(^|\.)instagram\.com$/i.test(host) || /(^|\.)instagr\.am$/i.test(host)) return 'instagram';
+    if (/(^|\.)tiktok\.com$/i.test(host)) return 'tiktok';
     return 'unknown';
   } catch {
     return 'unknown';

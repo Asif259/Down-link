@@ -289,20 +289,51 @@ describe('MediaService', () => {
     });
   });
 
+  describe('normalizeMediaUrl', () => {
+    it('normalizes youtu.be shortlinks to watch?v= format', () => {
+      const normalized = (service as any).normalizeMediaUrl(
+        'https://youtu.be/dQw4w9WgXcQ?si=abcdef123',
+        'youtube',
+      );
+      expect(normalized).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('normalizes youtube shorts to watch?v= format', () => {
+      const normalized = (service as any).normalizeMediaUrl(
+        'https://www.youtube.com/shorts/dQw4w9WgXcQ?feature=share',
+        'youtube',
+      );
+      expect(normalized).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('strips playlist and tracking parameters from watch URLs', () => {
+      const normalized = (service as any).normalizeMediaUrl(
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL123&index=2&si=track123',
+        'youtube',
+      );
+      expect(normalized).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('leaves non-YouTube URLs untouched', () => {
+      const raw = 'https://www.instagram.com/reel/C-xyz123/?utm_source=ig_web_copy_link';
+      expect((service as any).normalizeMediaUrl(raw, 'instagram')).toBe(raw);
+    });
+  });
+
   describe('getYoutubeExtractorArgs', () => {
-    it('returns web-embedded and mobile clients when hasCookies is true', () => {
+    it('returns web and tv clients when hasCookies is true', () => {
       const args = (service as any).getYoutubeExtractorArgs(true);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=mweb,web_embedded,android,web',
+        'youtube:player_client=tv,web,mweb',
       ]);
     });
 
-    it('returns web-embedded and mobile clients without webpage skip when hasCookies is false', () => {
+    it('returns mobile clients without webpage skip when hasCookies is false', () => {
       const args = (service as any).getYoutubeExtractorArgs(false);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=mweb,web_embedded,android',
+        'youtube:player_client=ios,android_vr,mweb',
       ]);
     });
   });
@@ -321,13 +352,14 @@ describe('MediaService', () => {
         binaryService.ytDlpPath,
         expect.arrayContaining([
           '--dump-single-json',
-          '--force-ipv4',
           '--cache-dir',
           path.join(process.cwd(), 'temp', '.cache'),
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=mweb,web_embedded,android',
+          'youtube:player_client=ios,android_vr,tv',
+          '--js-runtimes',
+          'node',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]),
         {
@@ -353,41 +385,49 @@ describe('MediaService', () => {
       spawnSpy.mockRestore();
     });
 
-    it('spawns yt-dlp with android/web player client when cookies exist', async () => {
-      const mockChild = new EventEmitter() as any;
-      mockChild.stdout = new EventEmitter();
-      mockChild.stderr = new EventEmitter();
-
+    it('retries with cookies and fallback player client when attempt 1 fails on YouTube', async () => {
       const cookiesDir = (service as any).cookiesDir;
       const masterCookie = path.join(cookiesDir, 'cookies.txt');
       fs.writeFileSync(masterCookie, '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 1999999999 SID test');
 
-      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
+      let attempt = 0;
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockImplementation(() => {
+        attempt++;
+        const child = new EventEmitter() as any;
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
 
-      const extractPromise = service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+        process.nextTick(() => {
+          if (attempt === 1) {
+            child.stderr.emit('data', Buffer.from('ERROR: [youtube] dQw4w9WgXcQ: Bot check\n'));
+            child.emit('close', 1);
+          } else {
+            const dummyMetadata = {
+              title: 'Rick Astley Fallback',
+              duration: 213,
+              uploader: 'RickAstleyVEVO',
+              formats: [],
+            };
+            child.stdout.emit('data', Buffer.from(JSON.stringify(dummyMetadata)));
+            child.emit('close', 0);
+          }
+        });
+        return child;
+      });
 
-      expect(spawnSpy).toHaveBeenCalledWith(
+      const result = await service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      expect(result.title).toBe('Rick Astley Fallback');
+      expect(attempt).toBe(2);
+
+      expect(spawnSpy).toHaveBeenLastCalledWith(
         binaryService.ytDlpPath,
         expect.arrayContaining([
-          '--force-ipv4',
           '--extractor-args',
-          'youtube:player_client=mweb,web_embedded,android,web',
+          'youtube:player_client=tv,mweb,web',
           '--cookies',
         ]),
         expect.anything(),
       );
-
-      const dummyMetadata = {
-        title: 'Rick Astley',
-        duration: 213,
-        uploader: 'RickAstleyVEVO',
-        formats: [],
-      };
-
-      mockChild.stdout.emit('data', Buffer.from(JSON.stringify(dummyMetadata)));
-      mockChild.emit('close', 0);
-
-      await extractPromise;
 
       if (fs.existsSync(masterCookie)) {
         fs.unlinkSync(masterCookie);
@@ -395,19 +435,60 @@ describe('MediaService', () => {
       spawnSpy.mockRestore();
     });
 
-    it('rejects with formatted error message when extraction exits with non-zero code', async () => {
+    it('tries with cookies first for Instagram URLs', async () => {
+      const cookiesDir = (service as any).cookiesDir;
+      const masterCookie = path.join(cookiesDir, 'cookies.txt');
+      fs.writeFileSync(masterCookie, '# Netscape HTTP Cookie File\n.instagram.com TRUE / FALSE 1999999999 sessionid test');
+
       const mockChild = new EventEmitter() as any;
       mockChild.stdout = new EventEmitter();
       mockChild.stderr = new EventEmitter();
 
       const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
 
-      const extractPromise = service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      const extractPromise = service.extractMetadata('https://www.instagram.com/reel/C-xyz123/');
 
-      mockChild.stderr.emit('data', Buffer.from('ERROR: [youtube] dQw4w9WgXcQ: Private video\n'));
-      mockChild.emit('close', 1);
+      expect(spawnSpy).toHaveBeenCalledWith(
+        binaryService.ytDlpPath,
+        expect.arrayContaining(['--cookies']),
+        expect.anything(),
+      );
 
-      await expect(extractPromise).rejects.toThrow('Private video');
+      const dummyMetadata = {
+        title: 'Instagram Reel',
+        duration: 30,
+        uploader: 'insta_user',
+        formats: [],
+      };
+
+      mockChild.stdout.emit('data', Buffer.from(JSON.stringify(dummyMetadata)));
+      mockChild.emit('close', 0);
+
+      const result = await extractPromise;
+      expect(result.title).toBe('Instagram Reel');
+      expect(result.platform).toBe('instagram');
+
+      if (fs.existsSync(masterCookie)) {
+        fs.unlinkSync(masterCookie);
+      }
+      spawnSpy.mockRestore();
+    });
+
+    it('rejects with formatted error message when all extraction attempts exit with non-zero code', async () => {
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockImplementation(() => {
+        const child = new EventEmitter() as any;
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        process.nextTick(() => {
+          child.stderr.emit('data', Buffer.from('ERROR: [youtube] dQw4w9WgXcQ: Private video\n'));
+          child.emit('close', 1);
+        });
+        return child;
+      });
+
+      await expect(
+        service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+      ).rejects.toThrow('Private video');
 
       spawnSpy.mockRestore();
     });
@@ -437,7 +518,9 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=mweb,web_embedded,android',
+          'youtube:player_client=ios,android_vr,tv',
+          '--js-runtimes',
+          'node',
           '--merge-output-format',
           'mp4',
         ]),
