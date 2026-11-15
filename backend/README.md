@@ -26,7 +26,25 @@ A high-performance media downloader backend optimized specifically for **Hosting
 
 ## 🛠️ API Reference
 
-### 1. Extract Media Metadata
+### 1. Health & Telemetry
+- **Route:** `GET /api/media/health`
+- **Response:**
+  ```json
+  {
+    "status": "ok",
+    "timestamp": "2026-11-15T03:08:57.941Z",
+    "uptimeSeconds": 10,
+    "concurrency": {
+      "activeCount": 0,
+      "queueLength": 0,
+      "maxConcurrent": 3,
+      "maxQueueLength": 20
+    },
+    "ytDlpPath": ".../backend/bin/yt-dlp_macos"
+  }
+  ```
+
+### 2. Extract Media Metadata
 - **Route:** `POST /api/media/extract`
 - **Request Body:**
   ```json

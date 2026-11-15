@@ -1,3 +1,4 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { ConcurrencyService } from '../../src/common/concurrency.service';
 
 describe('ConcurrencyService', () => {
@@ -38,9 +39,37 @@ describe('ConcurrencyService', () => {
 
     const results = await Promise.all(taskPromises);
     expect(results).toEqual([1, 2, 3, 4, 5]);
-    expect(maxSeenConcurrent).toBeLessThanOrEqual(3);
     expect(maxSeenConcurrent).toBe(3);
     expect(currentConcurrent).toBe(0);
+  });
+
+  it('should reject tasks with ServiceUnavailableException when queue is full', async () => {
+    // Service with custom small queue capacity: maxConcurrent: 1, maxQueue: 2
+    const smallService = new ConcurrencyService().configure(1, 2);
+
+    // 1 active task
+    const activePromise = smallService.run(
+      () => new Promise((resolve) => setTimeout(resolve, 100)),
+    );
+
+    // 2 queued tasks
+    const queued1 = smallService.run(async () => 'q1');
+    const queued2 = smallService.run(async () => 'q2');
+
+    // 4th task exceeds queue limit (maxQueue: 2) -> must throw 503
+    await expect(smallService.run(async () => 'overflow')).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+
+    await Promise.all([activePromise, queued1, queued2]);
+  });
+
+  it('should report accurate status telemetry', async () => {
+    const statusBefore = service.getStatus();
+    expect(statusBefore.activeCount).toBe(0);
+    expect(statusBefore.queueLength).toBe(0);
+    expect(statusBefore.maxConcurrent).toBe(3);
+    expect(statusBefore.maxQueueLength).toBe(20);
   });
 
   it('should release queue even if task throws', async () => {

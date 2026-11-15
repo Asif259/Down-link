@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  GatewayTimeoutException,
   Injectable,
   Logger,
   NotFoundException,
   OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { spawn } from 'child_process';
 import * as crypto from 'crypto';
@@ -46,13 +48,15 @@ interface CachedStreamEntry extends StreamProxyOptions {
 }
 
 @Injectable()
-export class MediaService implements OnModuleDestroy {
+export class MediaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MediaService.name);
   private readonly tempDir = path.join(process.cwd(), 'temp');
   private readonly jobStreams = new Map<string, Subject<JobProgress>>();
   private readonly streamCache = new Map<string, CachedStreamEntry>();
   private readonly cacheTtlMs = 20 * 60 * 1000; // 20 minutes
   private readonly cleanupTimer: NodeJS.Timeout;
+  private readonly extractTimeoutMs = 35000; // 35s max for metadata extraction
+  private readonly mergeTimeoutMs = 100000; // 100s max (strictly under Hostinger 120s ceiling)
 
   constructor(
     private readonly binaryService: BinaryService,
@@ -62,20 +66,50 @@ export class MediaService implements OnModuleDestroy {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
 
-    // Periodically purge expired stream tokens so RAM stays flat on Hostinger
+    // Periodically purge expired stream tokens and stale temp files
     this.cleanupTimer = setInterval(() => {
-      const now = Date.now();
-      for (const [token, entry] of this.streamCache.entries()) {
-        if (entry.expiresAt <= now) {
-          this.streamCache.delete(token);
-        }
-      }
+      this.purgeExpiredTokens();
+      this.cleanStaleTempFiles();
     }, 5 * 60 * 1000);
     this.cleanupTimer.unref();
   }
 
+  onModuleInit(): void {
+    this.cleanStaleTempFiles();
+  }
+
   onModuleDestroy(): void {
     clearInterval(this.cleanupTimer);
+  }
+
+  private purgeExpiredTokens(): void {
+    const now = Date.now();
+    for (const [token, entry] of this.streamCache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.streamCache.delete(token);
+      }
+    }
+  }
+
+  cleanStaleTempFiles(maxAgeMs = 30 * 60 * 1000): void {
+    try {
+      if (!fs.existsSync(this.tempDir)) return;
+      const now = Date.now();
+      const files = fs.readdirSync(this.tempDir);
+      for (const file of files) {
+        const filePath = path.join(this.tempDir, file);
+        try {
+          const stats = fs.statSync(filePath);
+          if (now - stats.mtimeMs >= maxAgeMs) {
+            fs.unlinkSync(filePath);
+            this.logger.debug(`Purged stale temp file: ${file}`);
+          }
+        } catch {}
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Stale temp cleanup error: ${msg}`);
+    }
   }
 
   getStreamOptions(token: string): StreamProxyOptions {
@@ -138,15 +172,32 @@ export class MediaService implements OnModuleDestroy {
           const child = spawn(this.binaryService.ytDlpPath, args, { shell: false });
           let stdout = '';
           let stderr = '';
+          let isDone = false;
+
+          const timer = setTimeout(() => {
+            if (isDone) return;
+            isDone = true;
+            try {
+              child.kill('SIGKILL');
+            } catch {}
+            this.logger.warn(`yt-dlp metadata extraction timed out after ${this.extractTimeoutMs}ms for ${url}`);
+            reject(
+              new GatewayTimeoutException('Media analysis timed out. The platform may be throttling requests.'),
+            );
+          }, this.extractTimeoutMs);
 
           child.stdout.on('data', (chunk) => (stdout += chunk.toString()));
           child.stderr.on('data', (chunk) => (stderr += chunk.toString()));
 
           child.on('close', (code) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+
             if (code !== 0) {
-              this.logger.warn(`yt-dlp metadata failed: ${stderr}`);
+              this.logger.warn(`yt-dlp metadata failed: ${stderr.trim().slice(0, 300)}`);
               return reject(
-                new BadRequestException('Could not fetch media details. The post may be private.'),
+                new BadRequestException('Could not fetch media details. The post may be private or removed.'),
               );
             }
             try {
@@ -166,8 +217,16 @@ export class MediaService implements OnModuleDestroy {
                 ),
               });
             } catch {
-              reject(new BadRequestException('Failed to parse media metadata.'));
+              reject(new BadRequestException('Failed to parse media metadata from upstream source.'));
             }
+          });
+
+          child.on('error', (err) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+            this.logger.error(`Spawn error for yt-dlp: ${err.message}`);
+            reject(new BadRequestException('Failed to launch extractor process.'));
           });
         }),
     );
@@ -182,7 +241,7 @@ export class MediaService implements OnModuleDestroy {
     const clean: CleanFormat[] = [];
     const seenHeights = new Set<number>();
 
-    // 1. Progressive formats (already contain both video + audio -> zero disk/FFmpeg overhead)
+    // 1. Progressive formats (both video + audio -> zero disk/FFmpeg overhead)
     for (const f of rawFormats) {
       if (f.vcodec !== 'none' && f.acodec !== 'none' && f.height && f.url) {
         if (!seenHeights.has(f.height)) {
@@ -254,11 +313,25 @@ export class MediaService implements OnModuleDestroy {
     formatId: string,
     type: 'video' | 'audio',
     jobId?: string,
+    abortSignal?: AbortSignal,
   ): Promise<{ filePath: string; filename: string; mimeType: string }> {
     const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const ext = type === 'audio' ? 'mp3' : 'mp4';
     const outputTemplate = path.join(this.tempDir, `${uniqueId}.%(ext)s`);
     const finalPath = path.join(this.tempDir, `${uniqueId}.${ext}`);
+
+    const cleanupTempArtifacts = () => {
+      try {
+        if (fs.existsSync(this.tempDir)) {
+          const files = fs.readdirSync(this.tempDir);
+          for (const file of files) {
+            if (file.startsWith(uniqueId)) {
+              fs.unlinkSync(path.join(this.tempDir, file));
+            }
+          }
+        }
+      } catch {}
+    };
 
     this.emitProgress(jobId, { status: 'starting', percent: 5 });
 
@@ -285,6 +358,43 @@ export class MediaService implements OnModuleDestroy {
           args.push(url);
 
           const child = spawn(this.binaryService.ytDlpPath, args, { shell: false });
+          let isDone = false;
+
+          const abortHandler = () => {
+            if (isDone) return;
+            isDone = true;
+            this.logger.log(`Client aborted download job ${uniqueId}; killing child process`);
+            try {
+              child.kill('SIGKILL');
+            } catch {}
+            cleanupTempArtifacts();
+            reject(new BadRequestException('Download cancelled by client.'));
+          };
+
+          if (abortSignal) {
+            if (abortSignal.aborted) {
+              abortHandler();
+              return;
+            }
+            abortSignal.addEventListener('abort', abortHandler, { once: true });
+          }
+
+          const timer = setTimeout(() => {
+            if (isDone) return;
+            isDone = true;
+            try {
+              child.kill('SIGKILL');
+            } catch {}
+            cleanupTempArtifacts();
+            this.emitProgress(jobId, {
+              status: 'error',
+              percent: 0,
+              message: 'Processing timed out.',
+            });
+            reject(
+              new GatewayTimeoutException('Media processing exceeded maximum allowable time.'),
+            );
+          }, this.mergeTimeoutMs);
 
           child.stdout.on('data', (chunk) => {
             const line = chunk.toString();
@@ -298,7 +408,15 @@ export class MediaService implements OnModuleDestroy {
           });
 
           child.on('close', (code) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+            if (abortSignal) {
+              abortSignal.removeEventListener('abort', abortHandler);
+            }
+
             if (code !== 0 || !fs.existsSync(finalPath)) {
+              cleanupTempArtifacts();
               this.emitProgress(jobId, {
                 status: 'error',
                 percent: 0,
@@ -308,6 +426,15 @@ export class MediaService implements OnModuleDestroy {
             }
             this.emitProgress(jobId, { status: 'ready', percent: 100 });
             resolve();
+          });
+
+          child.on('error', (err) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+            cleanupTempArtifacts();
+            this.logger.error(`Merge process error: ${err.message}`);
+            reject(new BadRequestException('Failed to execute merge process.'));
           });
         }),
     );

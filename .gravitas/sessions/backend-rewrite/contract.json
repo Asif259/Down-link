@@ -1,0 +1,27 @@
+{
+  "mode": "implement",
+  "objective": "Harden, optimize, and rewrite backend with Gravitas reliability runtime",
+  "acceptance_criteria": [
+    "AC-1: Secure domain matching prevents domain substring injection (rejects youtube.com.attacker.com, etc.)",
+    "AC-2: DownloadQueryDto accepts valid DASH yt-dlp format strings (e.g. 137+bestaudio[ext=m4a]/best) while preventing shell injection",
+    "AC-3: ConcurrencyService prevents unbounded queue growth with max queue limit and telemetry",
+    "AC-4: BinaryService uses atomic file downloads, timeouts, and corrupted binary recovery",
+    "AC-5: StreamProxyService enforces SSRF checks on redirect targets and prevents premature stream timeout truncation",
+    "AC-6: MediaService adds child process timeouts (30s/90s), client abort handling, and auto-cleanup of stale temp files",
+    "AC-7: MediaController adds LiteSpeed SSE non-buffering headers, UTF-8 Content-Disposition, and health check endpoint",
+    "AC-8: Comprehensive test coverage for all updated modules with 100% passing tests and clean production build"
+  ],
+  "non_goals": [
+    "Do not introduce external database or Redis",
+    "Do not break compatibility with frontend API contracts"
+  ],
+  "risk": "medium",
+  "budget": "balanced",
+  "allowed_write_scope": [
+    "backend/src/",
+    "backend/test/",
+    "backend/package.json",
+    "backend/README.md"
+  ],
+  "verification": "impact"
+}

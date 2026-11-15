@@ -28,14 +28,33 @@ describe('BinaryService', () => {
     expect(ffmpegPath.length).toBeGreaterThan(0);
   });
 
-  it('should skip download if binary already exists', async () => {
+  it('should skip download if valid binary already exists with non-zero size', async () => {
     const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    const statSpy = jest.spyOn(fs, 'statSync').mockReturnValue({ size: 10485760 } as any);
     const downloadSpy = jest.spyOn(service, 'downloadFile').mockResolvedValue();
 
     await service.onModuleInit();
 
     expect(downloadSpy).not.toHaveBeenCalled();
     existsSpy.mockRestore();
+    statSpy.mockRestore();
+    downloadSpy.mockRestore();
+  });
+
+  it('should re-download if existing binary has 0 bytes or is corrupted', async () => {
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    const statSpy = jest.spyOn(fs, 'statSync').mockReturnValue({ size: 0 } as any);
+    const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    const downloadSpy = jest.spyOn(service, 'downloadFile').mockResolvedValue();
+
+    await service.onModuleInit();
+
+    expect(unlinkSpy).toHaveBeenCalled();
+    expect(downloadSpy).toHaveBeenCalled();
+
+    existsSpy.mockRestore();
+    statSpy.mockRestore();
+    unlinkSpy.mockRestore();
     downloadSpy.mockRestore();
   });
 });

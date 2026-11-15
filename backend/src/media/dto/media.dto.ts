@@ -8,10 +8,14 @@ export class ExtractMediaDto {
 
 export class DownloadQueryDto {
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @IsNotEmpty()
   url: string;
 
   @IsString()
-  @Matches(/^[a-zA-Z0-9+_.-]+$/, { message: 'Invalid format identifier' })
+  @IsNotEmpty()
+  @Matches(/^[a-zA-Z0-9+_.\-\/\[\]=]+$/, {
+    message: 'Invalid format identifier. Must only contain safe format specifier characters.',
+  })
   formatId: string;
 
   @IsIn(['video', 'audio'])

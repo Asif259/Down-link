@@ -19,28 +19,60 @@ describe('Media DTOs', () => {
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
     });
-  });
 
-  describe('DownloadQueryDto', () => {
-    it('should validate a safe query payload', async () => {
-      const dto = plainToInstance(DownloadQueryDto, {
-        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-        formatId: '137+140',
-        type: 'video',
-        jobId: 'job_12345',
-      });
-      const errors = await validate(dto);
-      expect(errors.length).toBe(0);
-    });
-
-    it('should reject formatId containing shell injection characters', async () => {
-      const dto = plainToInstance(DownloadQueryDto, {
-        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-        formatId: '137; rm -rf /',
-        type: 'video',
+    it('should reject empty URL', async () => {
+      const dto = plainToInstance(ExtractMediaDto, {
+        url: '',
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('DownloadQueryDto', () => {
+    it('should validate safe standard and DASH format selectors', async () => {
+      const payloads = [
+        { formatId: '137+140', type: 'video' },
+        { formatId: '137+bestaudio[ext=m4a]/best', type: 'video' },
+        { formatId: 'bestvideo+bestaudio/best', type: 'video' },
+        { formatId: 'bestaudio', type: 'audio' },
+        { formatId: '18', type: 'video' },
+      ];
+
+      for (const p of payloads) {
+        const dto = plainToInstance(DownloadQueryDto, {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          formatId: p.formatId,
+          type: p.type,
+          jobId: 'job_12345',
+        });
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+
+    it('should reject formatId containing shell injection characters', async () => {
+      const injectionAttempts = [
+        '137; rm -rf /',
+        '137 | cat /etc/passwd',
+        '137 && echo pwned',
+        '137`whoami`',
+        '137$(whoami)',
+        '137>output.txt',
+        '137<input.txt',
+        '137" OR "1"="1',
+        "137' OR '1'='1",
+      ];
+
+      for (const formatId of injectionAttempts) {
+        const dto = plainToInstance(DownloadQueryDto, {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          formatId,
+          type: 'video',
+        });
+        const errors = await validate(dto);
+        expect(errors.length).toBeGreaterThan(0);
+      }
     });
 
     it('should reject invalid type parameter', async () => {

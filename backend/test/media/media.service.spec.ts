@@ -2,6 +2,8 @@ import { NotFoundException } from '@nestjs/common';
 import { MediaService } from '../../src/media/media.service';
 import { BinaryService } from '../../src/binary/binary.service';
 import { ConcurrencyService } from '../../src/common/concurrency.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('MediaService', () => {
   let service: MediaService;
@@ -70,5 +72,24 @@ describe('MediaService', () => {
     });
 
     (service as any).emitProgress(jobId, { status: 'starting', percent: 5 });
+  });
+
+  it('should sanitize titles with non-ASCII or non-filename characters', () => {
+    const cleaned = (service as any).sanitizeFilename('Awesome Video: Episode 1? [4K]', 'mp4');
+    expect(cleaned).toBe('Awesome Video Episode 1 [4K].mp4');
+
+    const emptyFallback = (service as any).sanitizeFilename('???///:::', 'mp3');
+    expect(emptyFallback).toBe('media.mp3');
+  });
+
+  it('should clean stale temp files on init without throwing', async () => {
+    const tempDir = (service as any).tempDir;
+    const testStaleFile = path.join(tempDir, `stale_test_${Date.now()}.part`);
+    fs.writeFileSync(testStaleFile, 'test');
+    expect(fs.existsSync(testStaleFile)).toBe(true);
+
+    await new Promise((r) => setTimeout(r, 15));
+    service.cleanStaleTempFiles(10); // 10ms threshold: clean immediately
+    expect(fs.existsSync(testStaleFile)).toBe(false);
   });
 });

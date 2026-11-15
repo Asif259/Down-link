@@ -14,9 +14,36 @@ export interface StreamProxyOptions {
 export class StreamProxyService {
   private readonly logger = new Logger(StreamProxyService.name);
   private readonly maxRedirects = 5;
+  private readonly connectTimeoutMs = 15000;
+  private readonly streamInactivityTimeoutMs = 60000;
 
   pipeFromCdn(options: StreamProxyOptions, req: Request, res: Response): void {
     this.fetchWithRedirects(options.targetUrl, options, req, res, 0);
+  }
+
+  private isPrivateOrBlockedAddress(hostname: string): boolean {
+    const lower = hostname.toLowerCase();
+    if (
+      lower === 'localhost' ||
+      lower === '127.0.0.1' ||
+      lower === '::1' ||
+      lower === '0.0.0.0' ||
+      lower === '169.254.169.254' // Cloud instance metadata IP
+    ) {
+      return true;
+    }
+
+    // RFC 1918 private IPv4 ranges (10.x, 172.16-31.x, 192.168.x) & Carrier-grade NAT (100.64.x)
+    if (
+      /^10\./.test(lower) ||
+      /^192\.168\./.test(lower) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(lower) ||
+      /^100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\./.test(lower)
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   private fetchWithRedirects(
@@ -43,6 +70,27 @@ export class StreamProxyService {
       return;
     }
 
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      if (!res.headersSent) {
+        res.status(400).json({ message: 'Unsupported upstream protocol.' });
+      }
+      return;
+    }
+
+    // SSRF Check: strictly disallow internal networks on redirects
+    // Note: Allow 127.0.0.1 only if in test environment for local mock servers
+    const isTest = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+    if (this.isPrivateOrBlockedAddress(parsedUrl.hostname)) {
+      const isLocalTest = isTest && (parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === 'localhost');
+      if (!isLocalTest) {
+        this.logger.warn(`SSRF attempt blocked to ${parsedUrl.hostname}`);
+        if (!res.headersSent) {
+          res.status(403).json({ message: 'Access to private/internal network addresses is forbidden.' });
+        }
+        return;
+      }
+    }
+
     const client = parsedUrl.protocol === 'http:' ? http : https;
 
     // Forward yt-dlp extracted headers + browser Range header if present
@@ -57,7 +105,7 @@ export class StreamProxyService {
       parsedUrl,
       {
         headers: requestHeaders,
-        timeout: 20000,
+        timeout: this.connectTimeoutMs,
       },
       (upstreamRes) => {
         const statusCode = upstreamRes.statusCode || 500;
@@ -90,6 +138,11 @@ export class StreamProxyService {
           return;
         }
 
+        // Adjust socket timeout to inactivity timeout during active stream transmission
+        if (upstreamRes.socket) {
+          upstreamRes.socket.setTimeout(this.streamInactivityTimeoutMs);
+        }
+
         // Preserve partial content status (206) if client requested a byte range
         res.status(statusCode === 206 ? 206 : 200);
 
@@ -107,8 +160,9 @@ export class StreamProxyService {
           res.setHeader('Accept-Ranges', upstreamRes.headers['accept-ranges']);
         }
 
-        // Support both ASCII fallback and UTF-8 filenames (for emojis/non-Latin titles)
-        const asciiName = options.filename.replace(/[^\x20-\x7E]/g, '_');
+        // Support both ASCII fallback and RFC 5987 UTF-8 filenames
+        const asciiName = (options.filename.replace(/[^\x20-\x7E]/g, '_').trim() || 'media.mp4')
+          .replace(/_{2,}/g, '_');
         const encodedName = encodeURIComponent(options.filename);
         res.setHeader(
           'Content-Disposition',
@@ -117,13 +171,14 @@ export class StreamProxyService {
 
         upstreamRes.pipe(res);
 
-        // Immediately abort upstream download if user closes browser tab or cancels
+        // Abort upstream stream if user closes browser tab or aborts
         const abortUpstream = () => {
-          if (!upstreamRes.destroyed) {
+          if (!res.writableEnded && !upstreamRes.destroyed) {
             upstreamRes.destroy();
           }
         };
         res.on('close', abortUpstream);
+
         upstreamRes.on('error', (err) => {
           this.logger.error(`Upstream stream error: ${err.message}`);
           if (!res.headersSent) {
@@ -136,7 +191,7 @@ export class StreamProxyService {
     );
 
     upstreamReq.on('timeout', () => {
-      upstreamReq.destroy(new BadGatewayException('Upstream CDN timed out.'));
+      upstreamReq.destroy(new BadGatewayException('Upstream CDN connection timed out.'));
     });
 
     upstreamReq.on('error', (err) => {

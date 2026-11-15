@@ -14,7 +14,13 @@ describe('StreamProxyService', () => {
       lastReceivedHeaders = req.headers;
 
       if (req.url === '/redirect') {
-        res.writeHead(302, { Location: '/stream-target' });
+        res.writeHead(302, { Location: `${serverUrl}/stream-target` });
+        res.end();
+        return;
+      }
+
+      if (req.url === '/redirect-ssrf') {
+        res.writeHead(302, { Location: 'http://169.254.169.254/latest/meta-data/' });
         res.end();
         return;
       }
@@ -63,6 +69,7 @@ describe('StreamProxyService', () => {
     const res = new EventEmitter() as any;
     res.headersSent = false;
     res.statusCode = 200;
+    res.writableEnded = false;
     res.setHeader = jest.fn((k: string, v: any) => {
       resHeaders[k.toLowerCase()] = v;
     });
@@ -73,12 +80,14 @@ describe('StreamProxyService', () => {
     res.json = jest.fn((data: any) => {
       res.headersSent = true;
       res.body = data;
+      res.writableEnded = true;
       res.emit('finish');
       return res;
     });
     res.end = jest.fn((data: any) => {
       res.headersSent = true;
       if (data) res.body = data;
+      res.writableEnded = true;
       res.emit('finish');
       return res;
     });
@@ -132,6 +141,27 @@ describe('StreamProxyService', () => {
         targetUrl: `${serverUrl}/redirect`,
         headers: {},
         filename: 'redirect_video.mp4',
+        mimeType: 'video/mp4',
+      },
+      req,
+      res,
+    );
+  });
+
+  it('should block SSRF redirect attempts to cloud metadata IP', (done) => {
+    const { req, res } = createMockReqRes();
+
+    res.on('finish', () => {
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toContain('Access to private/internal network addresses is forbidden.');
+      done();
+    });
+
+    service.pipeFromCdn(
+      {
+        targetUrl: `${serverUrl}/redirect-ssrf`,
+        headers: {},
+        filename: 'ssrf_video.mp4',
         mimeType: 'video/mp4',
       },
       req,

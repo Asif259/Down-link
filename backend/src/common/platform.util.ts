@@ -3,11 +3,24 @@ export type SupportedPlatform = 'youtube' | 'facebook' | 'instagram' | 'tiktok' 
 export function detectPlatform(rawUrl: string): SupportedPlatform {
   try {
     const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return 'unknown';
+    }
     const hostname = parsed.hostname.toLowerCase();
-    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
-    if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) return 'facebook';
-    if (hostname.includes('instagram.com')) return 'instagram';
-    if (hostname.includes('tiktok.com')) return 'tiktok';
+
+    // Exact domain or anchored subdomain matching to prevent domain substring spoofing
+    if (/(^|\.)youtube\.com$/i.test(hostname) || /(^|\.)youtu\.be$/i.test(hostname)) {
+      return 'youtube';
+    }
+    if (/(^|\.)facebook\.com$/i.test(hostname) || /(^|\.)fb\.watch$/i.test(hostname)) {
+      return 'facebook';
+    }
+    if (/(^|\.)instagram\.com$/i.test(hostname)) {
+      return 'instagram';
+    }
+    if (/(^|\.)tiktok\.com$/i.test(hostname)) {
+      return 'tiktok';
+    }
     return 'unknown';
   } catch {
     return 'unknown';

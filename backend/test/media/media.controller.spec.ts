@@ -2,12 +2,16 @@ import { BadRequestException } from '@nestjs/common';
 import { MediaController } from '../../src/media/media.controller';
 import { MediaService } from '../../src/media/media.service';
 import { StreamProxyService } from '../../src/media/stream-proxy.service';
+import { BinaryService } from '../../src/binary/binary.service';
+import { ConcurrencyService } from '../../src/common/concurrency.service';
 import { of } from 'rxjs';
 
 describe('MediaController', () => {
   let controller: MediaController;
   let mediaService: Partial<MediaService>;
   let streamProxyService: Partial<StreamProxyService>;
+  let binaryService: Partial<BinaryService>;
+  let concurrencyService: Partial<ConcurrencyService>;
 
   beforeEach(() => {
     mediaService = {
@@ -33,9 +37,24 @@ describe('MediaController', () => {
       pipeFromCdn: jest.fn(),
     };
 
+    binaryService = {
+      ytDlpPath: '/mock/bin/yt-dlp',
+    };
+
+    concurrencyService = {
+      getStatus: jest.fn().mockReturnValue({
+        activeCount: 1,
+        queueLength: 0,
+        maxConcurrent: 3,
+        maxQueueLength: 20,
+      }),
+    };
+
     controller = new MediaController(
       mediaService as MediaService,
       streamProxyService as StreamProxyService,
+      binaryService as BinaryService,
+      concurrencyService as ConcurrencyService,
     );
   });
 
@@ -47,6 +66,13 @@ describe('MediaController', () => {
     expect(mediaService.extractMetadata).toHaveBeenCalledWith(
       'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     );
+  });
+
+  it('should return health status and system telemetry', () => {
+    const health = controller.getHealth();
+    expect(health.status).toBe('ok');
+    expect(health.concurrency.maxConcurrent).toBe(3);
+    expect(health.ytDlpPath).toBe('/mock/bin/yt-dlp');
   });
 
   it('should reject invalid hex tokens on streamDirect', () => {
