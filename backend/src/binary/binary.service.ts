@@ -13,9 +13,23 @@ const ffmpegPath: string = ffmpegStatic?.default || ffmpegStatic;
 export class BinaryService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BinaryService.name);
   private readonly binDir = path.join(process.cwd(), 'bin');
+  private readonly runtimeTempDir = path.join(process.cwd(), 'temp');
   private readonly minBinarySizeBytes = 1024 * 1024; // 1MB minimum valid executable size
   private readonly downloadTimeoutMs = 60000; // 60s timeout for binary download
   private updateTimer?: NodeJS.Timeout;
+
+  get spawnEnv(): NodeJS.ProcessEnv {
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    return {
+      ...process.env,
+      TMPDIR: tempDir,
+      TEMP: tempDir,
+      TMP: tempDir,
+    };
+  }
 
   get ytDlpBinaryName(): string {
     if (process.platform === 'win32') return 'yt-dlp.exe';
@@ -37,6 +51,9 @@ export class BinaryService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     if (!fs.existsSync(this.binDir)) {
       fs.mkdirSync(this.binDir, { recursive: true });
+    }
+    if (!fs.existsSync(this.runtimeTempDir)) {
+      fs.mkdirSync(this.runtimeTempDir, { recursive: true });
     }
 
     let needsDownload = true;
@@ -98,7 +115,7 @@ export class BinaryService implements OnModuleInit, OnModuleDestroy {
   async updateYtDlpBinary(): Promise<string> {
     return new Promise((resolve, reject) => {
       this.logger.log('Checking for yt-dlp updates (-U)...');
-      const child = spawn(this.ytDlpPath, ['-U'], { shell: false });
+      const child = spawn(this.ytDlpPath, ['-U'], { shell: false, env: this.spawnEnv });
       let output = '';
 
       child.stdout.on('data', (chunk) => (output += chunk.toString()));

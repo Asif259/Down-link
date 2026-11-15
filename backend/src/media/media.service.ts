@@ -212,6 +212,28 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     return `${cleaned || 'media'}.${ext}`;
   }
 
+  private formatYtDlpError(stderr: string): string {
+    const lower = stderr.toLowerCase();
+    if (lower.includes('sign in to confirm') || lower.includes('not a bot')) {
+      return 'YouTube blocked the server IP. Please configure COOKIES_BASE64 in Hostinger environment variables.';
+    }
+    if (lower.includes('login required') || lower.includes('rate-limit reached')) {
+      return 'This platform requires authentication. Please configure COOKIES_BASE64 in Hostinger environment variables.';
+    }
+    if (lower.includes('failed to map segment') || lower.includes('permission denied')) {
+      return 'Server binary execution restricted (TMPDIR noexec).';
+    }
+    const lastLine = stderr
+      .trim()
+      .split('\n')
+      .reverse()
+      .find((line) => line.includes('ERROR:'));
+    if (lastLine) {
+      return lastLine.replace(/^.*ERROR:\s*(\[[^\]]+\]\s*[^:]+:\s*)?/i, '').slice(0, 180);
+    }
+    return 'Could not fetch media details. The post may be private or removed.';
+  }
+
   async extractMetadata(url: string): Promise<MediaInfoResponse> {
     const platform = detectPlatform(url);
     if (platform === 'unknown') {
@@ -224,18 +246,30 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       () =>
         new Promise((resolve, reject) => {
           const tempCookie = this.createTempCookieFile(platform);
+          const cacheDir = path.join(this.tempDir, '.cache');
           const args = [
             '--dump-single-json',
             '--no-playlist',
             '--no-warnings',
+            '--cache-dir',
+            cacheDir,
+            '--no-check-certificates',
+            '--geo-bypass',
           ];
+
+          if (platform === 'youtube') {
+            args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+          }
 
           if (tempCookie) {
             args.push('--cookies', tempCookie);
           }
           args.push(url);
 
-          const child = spawn(this.binaryService.ytDlpPath, args, { shell: false });
+          const child = spawn(this.binaryService.ytDlpPath, args, {
+            shell: false,
+            env: this.binaryService.spawnEnv,
+          });
           let stdout = '';
           let stderr = '';
           let isDone = false;
@@ -265,7 +299,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             if (code !== 0) {
               this.logger.warn(`yt-dlp metadata failed: ${stderr.trim().slice(0, 300)}`);
               return reject(
-                new BadRequestException('Could not fetch media details. The post may be private or removed.'),
+                new BadRequestException(this.formatYtDlpError(stderr)),
               );
             }
             try {
@@ -409,16 +443,25 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       () =>
         new Promise<void>((resolve, reject) => {
           const tempCookie = this.createTempCookieFile(platform);
+          const cacheDir = path.join(this.tempDir, '.cache');
           const args = [
             '--no-playlist',
             '--newline',
             '--ffmpeg-location',
             this.binaryService.ffmpegBinaryPath,
+            '--cache-dir',
+            cacheDir,
+            '--no-check-certificates',
+            '--geo-bypass',
             '-f',
             formatId,
             '-o',
             outputTemplate,
           ];
+
+          if (platform === 'youtube') {
+            args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+          }
 
           if (tempCookie) {
             args.push('--cookies', tempCookie);
@@ -432,7 +475,10 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
           args.push(url);
 
-          const child = spawn(this.binaryService.ytDlpPath, args, { shell: false });
+          const child = spawn(this.binaryService.ytDlpPath, args, {
+            shell: false,
+            env: this.binaryService.spawnEnv,
+          });
           let isDone = false;
 
           const abortHandler = () => {

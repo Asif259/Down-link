@@ -160,6 +160,27 @@ let MediaService = MediaService_1 = class MediaService {
             .slice(0, 80);
         return `${cleaned || 'media'}.${ext}`;
     }
+    formatYtDlpError(stderr) {
+        const lower = stderr.toLowerCase();
+        if (lower.includes('sign in to confirm') || lower.includes('not a bot')) {
+            return 'YouTube blocked the server IP. Please configure COOKIES_BASE64 in Hostinger environment variables.';
+        }
+        if (lower.includes('login required') || lower.includes('rate-limit reached')) {
+            return 'This platform requires authentication. Please configure COOKIES_BASE64 in Hostinger environment variables.';
+        }
+        if (lower.includes('failed to map segment') || lower.includes('permission denied')) {
+            return 'Server binary execution restricted (TMPDIR noexec).';
+        }
+        const lastLine = stderr
+            .trim()
+            .split('\n')
+            .reverse()
+            .find((line) => line.includes('ERROR:'));
+        if (lastLine) {
+            return lastLine.replace(/^.*ERROR:\s*(\[[^\]]+\]\s*[^:]+:\s*)?/i, '').slice(0, 180);
+        }
+        return 'Could not fetch media details. The post may be private or removed.';
+    }
     async extractMetadata(url) {
         const platform = (0, platform_util_1.detectPlatform)(url);
         if (platform === 'unknown') {
@@ -167,16 +188,27 @@ let MediaService = MediaService_1 = class MediaService {
         }
         return this.concurrency.run(() => new Promise((resolve, reject) => {
             const tempCookie = this.createTempCookieFile(platform);
+            const cacheDir = path.join(this.tempDir, '.cache');
             const args = [
                 '--dump-single-json',
                 '--no-playlist',
                 '--no-warnings',
+                '--cache-dir',
+                cacheDir,
+                '--no-check-certificates',
+                '--geo-bypass',
             ];
+            if (platform === 'youtube') {
+                args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+            }
             if (tempCookie) {
                 args.push('--cookies', tempCookie);
             }
             args.push(url);
-            const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, { shell: false });
+            const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, {
+                shell: false,
+                env: this.binaryService.spawnEnv,
+            });
             let stdout = '';
             let stderr = '';
             let isDone = false;
@@ -202,7 +234,7 @@ let MediaService = MediaService_1 = class MediaService {
                 this.removeTempCookieFile(tempCookie);
                 if (code !== 0) {
                     this.logger.warn(`yt-dlp metadata failed: ${stderr.trim().slice(0, 300)}`);
-                    return reject(new common_1.BadRequestException('Could not fetch media details. The post may be private or removed.'));
+                    return reject(new common_1.BadRequestException(this.formatYtDlpError(stderr)));
                 }
                 try {
                     const raw = JSON.parse(stdout);
@@ -313,16 +345,24 @@ let MediaService = MediaService_1 = class MediaService {
         this.emitProgress(jobId, { status: 'starting', percent: 5 });
         await this.concurrency.run(() => new Promise((resolve, reject) => {
             const tempCookie = this.createTempCookieFile(platform);
+            const cacheDir = path.join(this.tempDir, '.cache');
             const args = [
                 '--no-playlist',
                 '--newline',
                 '--ffmpeg-location',
                 this.binaryService.ffmpegBinaryPath,
+                '--cache-dir',
+                cacheDir,
+                '--no-check-certificates',
+                '--geo-bypass',
                 '-f',
                 formatId,
                 '-o',
                 outputTemplate,
             ];
+            if (platform === 'youtube') {
+                args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+            }
             if (tempCookie) {
                 args.push('--cookies', tempCookie);
             }
@@ -333,7 +373,10 @@ let MediaService = MediaService_1 = class MediaService {
                 args.push('--merge-output-format', 'mp4');
             }
             args.push(url);
-            const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, { shell: false });
+            const child = (0, child_process_1.spawn)(this.binaryService.ytDlpPath, args, {
+                shell: false,
+                env: this.binaryService.spawnEnv,
+            });
             let isDone = false;
             const abortHandler = () => {
                 if (isDone)

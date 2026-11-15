@@ -43,12 +43,21 @@ export class TempCleanupService implements OnModuleInit, OnModuleDestroy {
       const files = fs.readdirSync(this.tempDir);
 
       for (const file of files) {
-        if (file === '.gitkeep') continue;
+        if (file === '.gitkeep' || file === '.cache') continue;
 
         const fullPath = path.join(this.tempDir, file);
         try {
           const stat = fs.statSync(fullPath);
-          if (!stat.isFile()) continue;
+          if (!stat.isFile()) {
+            if (file.startsWith('_MEI')) {
+              const ageMs = now - stat.mtimeMs;
+              if (isStartup || ageMs > this.maxMediaAgeMs) {
+                fs.rmSync(fullPath, { recursive: true, force: true });
+                removedCount++;
+              }
+            }
+            continue;
+          }
 
           const ageMs = now - stat.mtimeMs;
           const isTempCookie = file.startsWith('cookie_') && file.endsWith('.txt');

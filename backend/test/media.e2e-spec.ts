@@ -98,6 +98,7 @@ describe('MediaController (e2e)', () => {
       .useValue({
         ytDlpPath: '/mock/bin/yt-dlp',
         ffmpegBinaryPath: '/mock/bin/ffmpeg',
+        spawnEnv: { ...process.env, TMPDIR: '/tmp', TEMP: '/tmp', TMP: '/tmp' },
         onModuleInit: jest.fn(),
         onModuleDestroy: jest.fn(),
       })

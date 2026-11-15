@@ -20,8 +20,21 @@ let BinaryService = BinaryService_1 = class BinaryService {
     constructor() {
         this.logger = new common_1.Logger(BinaryService_1.name);
         this.binDir = path.join(process.cwd(), 'bin');
+        this.runtimeTempDir = path.join(process.cwd(), 'temp');
         this.minBinarySizeBytes = 1024 * 1024;
         this.downloadTimeoutMs = 60000;
+    }
+    get spawnEnv() {
+        const tempDir = path.join(process.cwd(), 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        return {
+            ...process.env,
+            TMPDIR: tempDir,
+            TEMP: tempDir,
+            TMP: tempDir,
+        };
     }
     get ytDlpBinaryName() {
         if (process.platform === 'win32')
@@ -42,6 +55,9 @@ let BinaryService = BinaryService_1 = class BinaryService {
     async onModuleInit() {
         if (!fs.existsSync(this.binDir)) {
             fs.mkdirSync(this.binDir, { recursive: true });
+        }
+        if (!fs.existsSync(this.runtimeTempDir)) {
+            fs.mkdirSync(this.runtimeTempDir, { recursive: true });
         }
         let needsDownload = true;
         if (fs.existsSync(this.ytDlpPath)) {
@@ -91,7 +107,7 @@ let BinaryService = BinaryService_1 = class BinaryService {
     async updateYtDlpBinary() {
         return new Promise((resolve, reject) => {
             this.logger.log('Checking for yt-dlp updates (-U)...');
-            const child = (0, child_process_1.spawn)(this.ytDlpPath, ['-U'], { shell: false });
+            const child = (0, child_process_1.spawn)(this.ytDlpPath, ['-U'], { shell: false, env: this.spawnEnv });
             let output = '';
             child.stdout.on('data', (chunk) => (output += chunk.toString()));
             child.stderr.on('data', (chunk) => (output += chunk.toString()));

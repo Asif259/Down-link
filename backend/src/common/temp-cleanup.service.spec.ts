@@ -151,6 +151,69 @@ describe('TempCleanupService', () => {
       );
     });
 
+    it('skips .cache and .gitkeep during sweep', () => {
+      mockedFs.existsSync.mockReturnValue(true);
+      mockedFs.readdirSync.mockReturnValue([
+        '.cache',
+        '.gitkeep',
+        'fresh_video.mp4',
+      ] as unknown as ReturnType<typeof fs.readdirSync>);
+
+      mockedFs.statSync.mockImplementation(() => {
+        return {
+          isFile: () => true,
+          mtimeMs: baseTime - 1000,
+        } as fs.Stats;
+      });
+
+      const removed = service.sweepStaleFiles(true);
+      expect(removed).toBe(1);
+      expect(mockedFs.unlinkSync).toHaveBeenCalledTimes(1);
+      expect(mockedFs.unlinkSync).toHaveBeenCalledWith(
+        expect.stringContaining('fresh_video.mp4'),
+      );
+      expect(mockedFs.unlinkSync).not.toHaveBeenCalledWith(expect.stringContaining('.cache'));
+      expect(mockedFs.unlinkSync).not.toHaveBeenCalledWith(expect.stringContaining('.gitkeep'));
+    });
+
+    it('removes stale _MEI directories with rmSync while keeping recent ones', () => {
+      mockedFs.existsSync.mockReturnValue(true);
+      mockedFs.readdirSync.mockReturnValue([
+        '_MEI123456', // Stale directory (16 mins old)
+        '_MEI789012', // Active directory (5 mins old)
+        'regular_subfolder', // Non-MEI directory (should be ignored)
+      ] as unknown as ReturnType<typeof fs.readdirSync>);
+
+      mockedFs.statSync.mockImplementation((filePath: fs.PathLike) => {
+        const name = String(filePath);
+        let ageMinutes = 0;
+        if (name.endsWith('_MEI123456')) ageMinutes = 16;
+        if (name.endsWith('_MEI789012')) ageMinutes = 5;
+        if (name.endsWith('regular_subfolder')) ageMinutes = 60;
+
+        return {
+          isFile: () => false,
+          mtimeMs: baseTime - ageMinutes * 60 * 1000,
+        } as fs.Stats;
+      });
+
+      const removed = service.sweepStaleFiles(false);
+
+      expect(removed).toBe(1);
+      expect(mockedFs.rmSync).toHaveBeenCalledWith(
+        expect.stringContaining('_MEI123456'),
+        { recursive: true, force: true },
+      );
+      expect(mockedFs.rmSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('_MEI789012'),
+        expect.anything(),
+      );
+      expect(mockedFs.rmSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('regular_subfolder'),
+        expect.anything(),
+      );
+    });
+
     it('handles top-level readdirSync errors gracefully without throwing', () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readdirSync.mockImplementation(() => {

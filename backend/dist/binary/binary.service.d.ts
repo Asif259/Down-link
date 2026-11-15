@@ -2,9 +2,11 @@ import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 export declare class BinaryService implements OnModuleInit, OnModuleDestroy {
     private readonly logger;
     private readonly binDir;
+    private readonly runtimeTempDir;
     private readonly minBinarySizeBytes;
     private readonly downloadTimeoutMs;
     private updateTimer?;
+    get spawnEnv(): NodeJS.ProcessEnv;
     get ytDlpBinaryName(): string;
     get ytDlpPath(): string;
     get ffmpegBinaryPath(): string;

@@ -51,6 +51,7 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     getJobStream(jobId: string): Observable<JobProgress>;
     private emitProgress;
     private sanitizeFilename;
+    private formatYtDlpError;
     extractMetadata(url: string): Promise<MediaInfoResponse>;
     private normalizeFormats;
     prepareMergedFile(url: string, formatId: string, type: 'video' | 'audio', jobId?: string, abortSignal?: AbortSignal): Promise<{

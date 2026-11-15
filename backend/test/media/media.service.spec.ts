@@ -1,7 +1,9 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { MediaService } from '../../src/media/media.service';
 import { BinaryService } from '../../src/binary/binary.service';
 import { ConcurrencyService } from '../../src/common/concurrency.service';
+import * as childProcess from 'child_process';
+import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -111,6 +113,11 @@ describe('MediaService', () => {
   });
 
   it('should return null when no cookie file exists for platform or global', () => {
+    const cookiesDir = (service as any).cookiesDir;
+    const globalCookie = path.join(cookiesDir, 'cookies.txt');
+    if (fs.existsSync(globalCookie)) {
+      fs.unlinkSync(globalCookie);
+    }
     const tempCookie = service.createTempCookieFile('unknown');
     expect(tempCookie).toBeNull();
   });
@@ -129,5 +136,149 @@ describe('MediaService', () => {
     // Cleanup
     fs.unlinkSync(targetFile);
     process.env.COOKIES_BASE64 = originalEnv;
+  });
+
+  describe('formatYtDlpError', () => {
+    it('returns YouTube bot warning when stderr indicates bot challenge or sign in', () => {
+      const msg = (service as any).formatYtDlpError('Sign in to confirm you’re not a bot');
+      expect(msg).toContain('YouTube blocked the server IP');
+    });
+
+    it('returns authentication warning when login is required or rate limit reached', () => {
+      const msg = (service as any).formatYtDlpError('ERROR: Login required to access this post');
+      expect(msg).toContain('This platform requires authentication');
+    });
+
+    it('returns noexec warning when failed to map segment or permission denied', () => {
+      const msg = (service as any).formatYtDlpError('dlopen: failed to map segment from shared object');
+      expect(msg).toBe('Server binary execution restricted (TMPDIR noexec).');
+
+      const msg2 = (service as any).formatYtDlpError('/tmp/_MEI123456/yt-dlp: Permission denied');
+      expect(msg2).toBe('Server binary execution restricted (TMPDIR noexec).');
+    });
+
+    it('extracts and formats error detail from ERROR: line', () => {
+      const stderr = 'Some debug output\nERROR: [youtube] 12345: Video unavailable\nMore output';
+      const msg = (service as any).formatYtDlpError(stderr);
+      expect(msg).toBe('Video unavailable');
+    });
+
+    it('returns generic fallback when stderr does not match known patterns', () => {
+      const msg = (service as any).formatYtDlpError('Unexpected EOF');
+      expect(msg).toBe('Could not fetch media details. The post may be private or removed.');
+    });
+  });
+
+  describe('extractMetadata & prepareMergedFile spawn options', () => {
+    it('spawns yt-dlp with cache-dir, anti-bot extractor-args for youtube, and spawnEnv', async () => {
+      const mockChild = new EventEmitter() as any;
+      mockChild.stdout = new EventEmitter();
+      mockChild.stderr = new EventEmitter();
+
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
+
+      const extractPromise = service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      expect(spawnSpy).toHaveBeenCalledWith(
+        binaryService.ytDlpPath,
+        expect.arrayContaining([
+          '--dump-single-json',
+          '--cache-dir',
+          path.join(process.cwd(), 'temp', '.cache'),
+          '--no-check-certificates',
+          '--geo-bypass',
+          '--extractor-args',
+          'youtube:player_client=ios,mweb,web',
+          'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        ]),
+        {
+          shell: false,
+          env: binaryService.spawnEnv,
+        },
+      );
+
+      const dummyMetadata = {
+        title: 'Rick Astley',
+        duration: 213,
+        uploader: 'RickAstleyVEVO',
+        formats: [],
+      };
+
+      mockChild.stdout.emit('data', Buffer.from(JSON.stringify(dummyMetadata)));
+      mockChild.emit('close', 0);
+
+      const result = await extractPromise;
+      expect(result.title).toBe('Rick Astley');
+      expect(result.platform).toBe('youtube');
+
+      spawnSpy.mockRestore();
+    });
+
+    it('rejects with formatted error message when extraction exits with non-zero code', async () => {
+      const mockChild = new EventEmitter() as any;
+      mockChild.stdout = new EventEmitter();
+      mockChild.stderr = new EventEmitter();
+
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
+
+      const extractPromise = service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      mockChild.stderr.emit('data', Buffer.from('ERROR: [youtube] dQw4w9WgXcQ: Private video\n'));
+      mockChild.emit('close', 1);
+
+      await expect(extractPromise).rejects.toThrow('Private video');
+
+      spawnSpy.mockRestore();
+    });
+
+    it('spawns yt-dlp with cache-dir, geo-bypass, and spawnEnv in prepareMergedFile', async () => {
+      const mockChild = new EventEmitter() as any;
+      mockChild.stdout = new EventEmitter();
+      mockChild.stderr = new EventEmitter();
+
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
+
+      const mergePromise = service.prepareMergedFile(
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        '18',
+        'video',
+        'test_merge_job_1',
+      );
+
+      expect(spawnSpy).toHaveBeenCalledWith(
+        binaryService.ytDlpPath,
+        expect.arrayContaining([
+          '--ffmpeg-location',
+          binaryService.ffmpegBinaryPath,
+          '--cache-dir',
+          path.join(process.cwd(), 'temp', '.cache'),
+          '--no-check-certificates',
+          '--geo-bypass',
+          '--extractor-args',
+          'youtube:player_client=ios,mweb,web',
+          '--merge-output-format',
+          'mp4',
+        ]),
+        {
+          shell: false,
+          env: binaryService.spawnEnv,
+        },
+      );
+
+      // Create dummy output file so fs.existsSync passes
+      const finalExpectedPath = path.join(process.cwd(), 'temp', 'test_merge_job_1.mp4');
+      fs.writeFileSync(finalExpectedPath, 'dummy video content');
+
+      mockChild.emit('close', 0);
+
+      const result = await mergePromise;
+      expect(result.filePath).toBe(finalExpectedPath);
+      expect(result.mimeType).toBe('video/mp4');
+
+      if (fs.existsSync(finalExpectedPath)) {
+        fs.unlinkSync(finalExpectedPath);
+      }
+      spawnSpy.mockRestore();
+    });
   });
 });

@@ -68,14 +68,28 @@ describe('BinaryService', () => {
     downloadSpy.mockRestore();
   });
 
-  it('should execute yt-dlp -U and return update summary', async () => {
+  it('should provide spawnEnv with TMPDIR, TEMP, and TMP pointing to temp directory', () => {
+    const env = service.spawnEnv;
+    const expectedTemp = path.join(process.cwd(), 'temp');
+    expect(env.TMPDIR).toBe(expectedTemp);
+    expect(env.TEMP).toBe(expectedTemp);
+    expect(env.TMP).toBe(expectedTemp);
+    expect(fs.existsSync(expectedTemp)).toBe(true);
+  });
+
+  it('should execute yt-dlp -U with spawnEnv and return update summary', async () => {
     const mockChild = new EventEmitter() as any;
     mockChild.stdout = new EventEmitter();
     mockChild.stderr = new EventEmitter();
 
-    jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
+    const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
 
     const updatePromise = service.updateYtDlpBinary();
+
+    expect(spawnSpy).toHaveBeenCalledWith(service.ytDlpPath, ['-U'], {
+      shell: false,
+      env: service.spawnEnv,
+    });
 
     mockChild.stdout.emit('data', Buffer.from('yt-dlp is up to date (2026.10.26)\n'));
     mockChild.emit('close', 0);
@@ -83,6 +97,6 @@ describe('BinaryService', () => {
     const result = await updatePromise;
     expect(result).toBe('yt-dlp is up to date (2026.10.26)');
 
-    (childProcess.spawn as jest.Mock).mockRestore();
+    spawnSpy.mockRestore();
   });
 });
