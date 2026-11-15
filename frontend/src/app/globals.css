@@ -1,8 +1,3 @@
-/* Hallmark · shape: Diagram · genre: atmospheric · theme: Lumen (by request) · redesign: full
- * hero: Settled · nav: Edge-aligned · footer: Minimal · imagery: none · signature: stream-rail
- * axes: dark/roman-serif/warm · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: H, focused header hierarchy and refined contrast */
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./base.css" layer(base);
@@ -24,7 +19,7 @@ html {
 body {
   background: var(--color-paper);
   color: var(--color-ink);
-  font-family: var(--font-body), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-variant-numeric: tabular-nums;
   overflow-x: clip;
   padding-top: env(safe-area-inset-top, 0px);
@@ -35,10 +30,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Browser surface theming from Lumen tokens */
+/* Subtle scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -46,17 +41,16 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-rule);
-  border-radius: 4px;
+  background: var(--color-rule-2);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-rule-2);
+  background: var(--color-muted);
 }
 
-/* Caret and selection styling */
 ::selection {
-  background-color: color-mix(in oklab, var(--color-accent) 22%, transparent);
+  background-color: rgba(226, 182, 89, 0.22);
   color: var(--color-ink);
 }
 
@@ -65,31 +59,8 @@ textarea {
   caret-color: var(--color-accent);
 }
 
-button:active,
-a:active {
-  transform: translateY(1px);
-}
-
 button {
   white-space: nowrap;
-}
-
-.lumen-grid-overlay {
-  background-image:
-    linear-gradient(to right, var(--rule-blueprint) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--rule-blueprint) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black 70%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black 70%, transparent 100%);
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -14,10 +14,6 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import Aurora from './react-bits/Aurora';
-import Magnet from './react-bits/Magnet';
-import SpotlightCard from './react-bits/SpotlightCard';
-import StarBorder from './react-bits/StarBorder';
 import DownloadHistory from './DownloadHistory';
 import {
   API_BASE_URL,
@@ -36,92 +32,34 @@ import {
   SupportedPlatform,
 } from '../lib/media';
 
-const PLATFORM_THEMES: Record<
-  SupportedPlatform,
-  {
-    name: string;
-    accentHex: string;
-    spotlightRgba: string;
-    auroraStops: [string, string, string];
-    pillClasses: string;
-    buttonClasses: string;
-  }
-> = {
-  youtube: {
-    name: 'youtube engine',
-    accentHex: '#ef4444',
-    spotlightRgba: 'rgba(239, 68, 68, 0.16)',
-    auroraStops: ['#5c1a24', '#8f6f30', '#1c1024'],
-    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-rule-2)]',
-    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
-  },
-  facebook: {
-    name: 'facebook engine',
-    accentHex: '#3b82f6',
-    spotlightRgba: 'rgba(59, 130, 246, 0.16)',
-    auroraStops: ['#1d3b66', '#8f6f30', '#1c1024'],
-    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-ink-2)] border-[var(--color-rule-2)]',
-    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
-  },
-  instagram: {
-    name: 'instagram engine',
-    accentHex: '#ec4899',
-    spotlightRgba: 'rgba(236, 72, 153, 0.16)',
-    auroraStops: ['#661e44', '#8f6f30', '#1c1024'],
-    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-rule-2)]',
-    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
-  },
-  tiktok: {
-    name: 'tiktok engine',
-    accentHex: '#06b6d4',
-    spotlightRgba: 'rgba(6, 182, 212, 0.16)',
-    auroraStops: ['#164a57', '#8f6f30', '#1c1024'],
-    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-rule-2)]',
-    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
-  },
-  unknown: {
-    name: 'universal extractor',
-    accentHex: '#e2b659',
-    spotlightRgba: 'rgba(226, 182, 89, 0.16)',
-    auroraStops: ['#2e153b', '#8f6f30', '#1c1024'],
-    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-rule-2)]',
-    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
-  },
-};
-
-const PLATFORM_SHOWCASE: Array<{
+const PLATFORM_PRESETS: Array<{
   platform: SupportedPlatform;
   label: string;
   tag: string;
-  dotColor: string;
   placeholder: string;
 }> = [
   {
     platform: 'youtube',
-    label: 'youtube',
-    tag: '1080p hd & mp3',
-    dotColor: '#ef4444',
+    label: 'YouTube',
+    tag: '1080p & MP3',
     placeholder: 'https://www.youtube.com/watch?v=…',
   },
   {
     platform: 'tiktok',
-    label: 'tiktok',
-    tag: 'no watermark',
-    dotColor: '#06b6d4',
+    label: 'TikTok',
+    tag: 'No watermark',
     placeholder: 'https://www.tiktok.com/@user/video/…',
   },
   {
     platform: 'instagram',
-    label: 'instagram',
-    tag: 'reels & audio',
-    dotColor: '#ec4899',
+    label: 'Instagram',
+    tag: 'Reels & audio',
     placeholder: 'https://www.instagram.com/reel/…',
   },
   {
     platform: 'facebook',
-    label: 'facebook',
-    tag: 'hd watch',
-    dotColor: '#3b82f6',
+    label: 'Facebook',
+    tag: 'Watch & video',
     placeholder: 'https://www.facebook.com/watch/?v=…',
   },
 ];
@@ -145,7 +83,6 @@ export default function MediaDownloader() {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistory(loadHistory());
     return () => {
       if (eventSourceRef.current) {
@@ -156,11 +93,6 @@ export default function MediaDownloader() {
       }
     };
   }, []);
-
-  const theme = useMemo(() => {
-    const key = media?.platform || detectedPlatform;
-    return PLATFORM_THEMES[key] || PLATFORM_THEMES.unknown;
-  }, [media?.platform, detectedPlatform]);
 
   const handleUrlChange = useCallback((value: string) => {
     const cleaned = cleanUrlInput(value);
@@ -175,7 +107,7 @@ export default function MediaDownloader() {
   const fetchMediaInfo = useCallback(async (targetUrl: string) => {
     const trimmed = targetUrl.trim();
     if (!trimmed) {
-      setError('Please provide a valid media URL.');
+      setError('Please provide a valid media URL');
       return;
     }
 
@@ -203,7 +135,7 @@ export default function MediaDownloader() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Failed to extract media information.');
+        throw new Error(data.message || data.error || 'Failed to extract media information');
       }
 
       setMedia(data);
@@ -231,7 +163,7 @@ export default function MediaDownloader() {
         return;
       }
       const message =
-        err instanceof Error ? err.message : 'An unexpected error occurred.';
+        err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(message);
     } finally {
       setLoading(false);
@@ -256,12 +188,12 @@ export default function MediaDownloader() {
   const handleClipboardButton = useCallback(async () => {
     try {
       if (!navigator.clipboard?.readText) {
-        setError('Clipboard access not supported in this browser.');
+        setError('Clipboard access not supported in this browser');
         return;
       }
       const clipText = await navigator.clipboard.readText();
       if (!clipText.trim()) {
-        setError('Clipboard is empty.');
+        setError('Clipboard is empty');
         return;
       }
       const cleaned = cleanUrlInput(clipText);
@@ -293,7 +225,7 @@ export default function MediaDownloader() {
           es.close();
           eventSourceRef.current = null;
           setActiveFormatId(null);
-          setError(payload.message || 'Media conversion process failed.');
+          setError(payload.message || 'Media conversion process failed');
         }
       } catch {
         // Ignore unparseable frames
@@ -325,7 +257,7 @@ export default function MediaDownloader() {
 
     try {
       if (!format.needsMerge && format.streamToken) {
-        // Zero-disk Direct CDN stream proxy for instant mobile / 360p formats
+        // Zero-disk Direct CDN stream proxy for instant mobile / single-stream formats
         setActiveFormatId(null);
         triggerBrowserDownload(
           `${API_BASE_URL}/api/media/stream/${format.streamToken}`
@@ -335,7 +267,7 @@ export default function MediaDownloader() {
 
       // High-res DASH or MP3 audio conversion via server FFmpeg
       const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      setJobProgress({ status: 'starting', percent: 5, message: 'Starting download...' });
+      setJobProgress({ status: 'starting', percent: 5, message: 'Starting extraction' });
       listenToJobProgress(jobId);
 
       const downloadUrl = `${API_BASE_URL}/api/media/download?url=${encodeURIComponent(
@@ -347,7 +279,7 @@ export default function MediaDownloader() {
       setActiveFormatId(null);
       setJobProgress(null);
       const message =
-        err instanceof Error ? err.message : 'Could not initialize download.';
+        err instanceof Error ? err.message : 'Could not initialize download';
       setError(message);
     }
   };
@@ -377,82 +309,80 @@ export default function MediaDownloader() {
     setHistory([]);
   }, []);
 
+  const isBusy = loading || Boolean(activeFormatId);
+
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[var(--color-paper)] text-[var(--color-ink)] selection:bg-[var(--color-accent)]/20 selection:text-[var(--color-ink)]">
-      <Aurora colorStops={theme.auroraStops} speed={0.7} amplitude={1.2} />
-
-      <div className="pointer-events-none absolute inset-0 lumen-grid-overlay" />
-
-      <div className="relative z-10 max-w-4xl mx-auto px-3.5 sm:px-6 pt-10 sm:pt-16 pb-16 sm:pb-24 space-y-8 sm:space-y-10">
-        <header className="text-center space-y-4 sm:space-y-5 max-w-2xl mx-auto">
-          <motion.h1
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="font-display text-3xl sm:text-5xl md:text-6xl tracking-[var(--tracking-display)] text-[var(--color-ink)] font-normal leading-[1.08] mx-auto"
-          >
-            Download media from any platform in seconds<span className="text-[var(--color-accent-2)]">.</span>
-          </motion.h1>
-
-          <p className="text-sm sm:text-base text-[var(--color-muted)] max-w-xl mx-auto leading-relaxed">
-            Paste a link from{' '}
-            <span className="text-[var(--color-ink)] font-medium">YouTube</span>,{' '}
-            <span className="text-[var(--color-ink)] font-medium">Facebook</span>,{' '}
-            <span className="text-[var(--color-ink)] font-medium">Instagram</span>, or{' '}
-            <span className="text-[var(--color-ink)] font-medium">TikTok</span>. Automatically detects
-            streams and delivers crisp MP4 video or studio-grade MP3 audio.
-          </p>
-        </header>
-
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-pill)] text-xs font-semibold border transition-colors duration-300 ${theme.pillClasses}`}
-              >
-                <span
-                  className="w-2 h-2 rounded-[var(--radius-pill)] motion-safe:animate-pulse motion-reduce:animate-none shrink-0"
-                  style={{ backgroundColor: theme.accentHex }}
-                />
-                {theme.name}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleClipboardButton}
-              aria-label="Paste URL from clipboard"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-ink-2)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-3)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] px-3 py-1.5 min-h-[36px] sm:min-h-0 rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] transition-colors cursor-pointer"
-            >
-              <ClipboardPaste className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0" />
-              Paste from Clipboard
-            </button>
+    <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] selection:bg-[var(--color-accent)]/20 selection:text-[var(--color-ink)]">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-8">
+        
+        {/* Studio Rack Top Console Header */}
+        <header className="flex items-center justify-between pb-5 border-b border-[var(--color-rule)]">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`w-2 h-2 rounded-full transition-colors ${
+                isBusy
+                  ? 'bg-[var(--color-accent)]'
+                  : 'bg-[var(--color-muted)]'
+              }`}
+              aria-hidden="true"
+            />
+            <span className="text-sm font-semibold tracking-tight text-[var(--color-ink)]">
+              Down-link
+            </span>
+            <span className="text-xs font-mono text-[var(--color-muted)] border-l border-[var(--color-rule)] pl-2.5">
+              Stream Engine
+            </span>
           </div>
 
-          <StarBorder color={theme.accentHex}>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono text-[var(--color-muted)]">
+              {isBusy ? 'ACTIVE' : 'READY'}
+            </span>
+            <span
+              className={`inline-block w-1.5 h-1.5 rounded-full ${
+                isBusy ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-success)]'
+              }`}
+            />
+          </div>
+        </header>
+
+        {/* Hero Title & Description */}
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[var(--color-ink)]">
+            Universal media extractor
+          </h1>
+          <p className="text-sm text-[var(--color-secondary)] text-[var(--color-ink-2)] max-w-xl">
+            Extract and download media streams from YouTube, TikTok, Instagram, and Facebook in high-definition video or audio.
+          </p>
+        </div>
+
+        {/* Primary Extraction Input Deck */}
+        <section className="space-y-3" aria-label="Media extraction console">
+          <div className="rounded-[var(--radius-card)] bg-[var(--color-paper-2)] border border-[var(--color-rule)] focus-within:border-[var(--color-rule-2)] transition-colors p-1.5 sm:p-2">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 fetchMediaInfo(url);
               }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 sm:p-2.5"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
             >
               <div className="relative flex-1 flex items-center">
                 <input
                   id="media-url-input"
-                  aria-label="Media link from YouTube, TikTok, Instagram, or Facebook"
+                  aria-label="Media URL from YouTube, TikTok, Instagram, or Facebook"
                   type="url"
                   value={url}
                   onChange={(e) => handleUrlChange(e.target.value)}
                   onPaste={handlePaste}
                   placeholder={
-                    PLATFORM_SHOWCASE.find((p) => p.platform === detectedPlatform)?.placeholder ||
-                    'https://www.youtube.com/watch?v=… or TikTok / Reel link'
+                    PLATFORM_PRESETS.find((p) => p.platform === detectedPlatform)?.placeholder ||
+                    'Paste video or audio link'
                   }
-                  className="w-full bg-transparent pl-3.5 sm:pl-4 pr-11 py-3 sm:py-3.5 text-base text-[var(--color-ink)] placeholder-[var(--color-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/50 rounded-[var(--radius-card)]"
+                  className="w-full bg-transparent px-3 py-2.5 sm:py-3 text-sm text-[var(--color-ink)] placeholder-[var(--color-muted)] focus:outline-none font-sans"
                   required
                 />
-                {url && (
+
+                {url ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -461,40 +391,52 @@ export default function MediaDownloader() {
                       setMedia(null);
                       setError(null);
                     }}
-                    aria-label="Clear URL input"
-                    className="absolute right-2 sm:right-3 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-[var(--radius-card)] text-[var(--color-muted)] hover:text-[var(--color-ink)] active:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] transition-colors cursor-pointer"
+                    aria-label="Clear input"
+                    className="p-1.5 mr-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] rounded-[var(--radius-sm)] hover:bg-[var(--color-paper-3)] transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleClipboardButton}
+                    aria-label="Paste from clipboard"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 mr-1 text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)] rounded-[var(--radius-sm)] hover:bg-[var(--color-paper-3)] transition-colors cursor-pointer"
+                  >
+                    <ClipboardPaste className="w-3.5 h-3.5" />
+                    <span>Paste</span>
+                    <kbd className="px-1 py-0.2 text-[10px] font-mono bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded text-[var(--color-muted)]">
+                      ⌘V
+                    </kbd>
                   </button>
                 )}
               </div>
 
-              <Magnet strength={0.18} disabled={loading || !url.trim()} className="w-full sm:w-auto">
-                <button
-                  type="submit"
-                  disabled={loading || !url.trim()}
-                  aria-label={loading ? 'Extracting media streams…' : 'Extract media streams'}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 ${theme.buttonClasses} hover:opacity-95 active:opacity-90 disabled:bg-[var(--color-paper-3)] disabled:text-[var(--color-muted)] disabled:shadow-none font-semibold text-sm px-6 sm:px-7 py-3.5 min-h-[48px] rounded-[var(--radius-pill)] shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer whitespace-nowrap`}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Extracting…</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownToLine className="w-4 h-4" />
-                      <span>Extract</span>
-                    </>
-                  )}
-                </button>
-              </Magnet>
+              <button
+                type="submit"
+                disabled={loading || !url.trim()}
+                aria-label={loading ? 'Extracting media streams' : 'Extract media streams'}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2.5 text-xs font-semibold rounded-[var(--radius-md)] bg-[var(--color-accent)] text-[var(--color-accent-ink)] hover:opacity-95 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap min-h-[40px] sm:min-h-[38px]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Extracting</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowDownToLine className="w-4 h-4" />
+                    <span>Extract</span>
+                  </>
+                )}
+              </button>
             </form>
-          </StarBorder>
+          </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {PLATFORM_SHOWCASE.map((item) => {
+          {/* Platform Presets & Quick Sample Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {PLATFORM_PRESETS.map((item) => {
                 const isSelected =
                   (media?.platform || detectedPlatform) === item.platform;
                 return (
@@ -502,21 +444,16 @@ export default function MediaDownloader() {
                     key={item.platform}
                     type="button"
                     onClick={() => setDetectedPlatform(item.platform)}
-                    aria-label={`Select ${item.label} platform`}
                     aria-pressed={isSelected}
-                    className={`group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-[var(--radius-pill)] text-xs font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] font-medium transition-colors cursor-pointer border ${
                       isSelected
-                        ? 'bg-[var(--color-paper-3)] border-[var(--color-accent)] text-[var(--color-ink)] shadow-sm'
-                        : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
+                        ? 'bg-[var(--color-paper-3)] border-[var(--color-rule-2)] text-[var(--color-ink)]'
+                        : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:border-[var(--color-rule-2)]'
                     }`}
                   >
-                    <span
-                      className="w-2 h-2 rounded-[var(--radius-pill)] shrink-0"
-                      style={{ backgroundColor: item.dotColor }}
-                    />
-                    <span className="font-semibold text-[var(--color-ink)]">{item.label}</span>
-                    <span className="text-[11px] text-[var(--color-muted)] hidden md:inline font-mono">
-                      / {item.tag}
+                    <span>{item.label}</span>
+                    <span className="font-mono text-[10px] text-[var(--color-muted)]">
+                      {item.tag}
                     </span>
                   </button>
                 );
@@ -530,33 +467,32 @@ export default function MediaDownloader() {
                 handleUrlChange(DEMO_SAMPLE_URL);
                 fetchMediaInfo(DEMO_SAMPLE_URL);
               }}
-              aria-label="Try 1-Click Demo with sample YouTube video"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-[var(--radius-pill)] text-xs font-semibold bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] active:bg-[var(--color-paper)] text-[var(--color-accent)] border border-[var(--color-rule-2)] hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              className="inline-flex items-center gap-1 text-xs text-[var(--color-accent)] hover:underline cursor-pointer disabled:opacity-50 py-1"
             >
-              <Zap className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0" />
-              Try 1-Click Demo
+              <Zap className="w-3.5 h-3.5" />
+              <span>Try sample link</span>
             </button>
           </div>
 
+          {/* Error Message Notice */}
           <AnimatePresence>
             {error && (
               <motion.div
                 role="alert"
-                aria-live="assertive"
-                initial={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="flex items-center justify-between gap-3 bg-[var(--color-paper-2)] border border-[var(--color-error)] text-[var(--color-ink)] text-sm rounded-[var(--radius-card)] px-4 py-3.5"
+                exit={{ opacity: 0, y: -4 }}
+                className="flex items-center justify-between gap-3 bg-[var(--color-paper-2)] border border-[var(--color-error)] text-[var(--color-ink)] text-xs rounded-[var(--radius-md)] px-3.5 py-2.5"
               >
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-[var(--color-error)]" />
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-[var(--color-error)] shrink-0" />
                   <span>{error}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setError(null)}
                   aria-label="Dismiss error notification"
-                  className="text-[var(--color-muted)] hover:text-[var(--color-ink)] p-1 rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] cursor-pointer transition-colors"
+                  className="text-[var(--color-muted)] hover:text-[var(--color-ink)] p-1 rounded hover:bg-[var(--color-paper-3)] transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -565,85 +501,84 @@ export default function MediaDownloader() {
           </AnimatePresence>
         </section>
 
+        {/* Loading Skeleton */}
         {loading && (
-          <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-6 space-y-6 motion-safe:animate-pulse motion-reduce:animate-none border border-[var(--color-rule)] bg-[var(--color-paper-2)] rounded-[var(--radius-card)]">
-            <div className="flex flex-col sm:flex-row gap-6">
-              <div className="w-full sm:w-64 aspect-video bg-[var(--color-paper-3)] rounded-[var(--radius-card)] shrink-0" />
-              <div className="flex-1 space-y-4 py-1">
-                <div className="h-4 bg-[var(--color-paper-3)] rounded-[var(--radius-pill)] w-28" />
-                <div className="h-6 bg-[var(--color-paper-3)] rounded-[var(--radius-card)] w-4/5" />
-                <div className="h-4 bg-[var(--color-paper-3)] rounded-[var(--radius-card)] w-1/3" />
-                <div className="h-10 bg-[var(--color-paper-3)] rounded-[var(--radius-card)] w-56 mt-4" />
+          <div className="p-5 space-y-5 rounded-[var(--radius-card)] border border-[var(--color-rule)] bg-[var(--color-paper-2)]">
+            <div className="flex flex-col sm:flex-row gap-5 items-start">
+              <div className="w-full sm:w-56 aspect-video bg-[var(--color-paper-3)] rounded-[8px] shrink-0" />
+              <div className="flex-1 space-y-3 w-full py-1">
+                <div className="h-3.5 bg-[var(--color-paper-3)] rounded w-24" />
+                <div className="h-5 bg-[var(--color-paper-3)] rounded w-4/5" />
+                <div className="h-3.5 bg-[var(--color-paper-3)] rounded w-1/3" />
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
-              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
-              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
-              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="h-16 bg-[var(--color-paper-3)] rounded-[var(--radius-md)]" />
+              <div className="h-16 bg-[var(--color-paper-3)] rounded-[var(--radius-md)]" />
             </div>
-          </SpotlightCard>
+          </div>
         )}
 
+        {/* Media Inspector & Stream Selection */}
         <AnimatePresence mode="wait">
           {media && !loading && (
             <motion.div
               key={media.title}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-5"
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-4"
             >
-              <SpotlightCard
-                spotlightColor={theme.spotlightRgba}
-                className="p-4 sm:p-6 border border-[var(--color-rule)] bg-[var(--color-paper-2)] rounded-[var(--radius-card)]"
-              >
-                <div className="flex flex-col md:flex-row gap-5 sm:gap-6 items-start">
-                  <div className="relative w-full md:w-64 aspect-video rounded-[var(--radius-card)] overflow-hidden bg-[var(--color-paper)] border border-[var(--color-rule)] shrink-0 group">
+              {/* Main Media Metadata Card */}
+              <div className="p-4 sm:p-5 rounded-[var(--radius-card)] border border-[var(--color-rule)] bg-[var(--color-paper-2)] space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-start">
+                  <div className="relative w-full sm:w-56 aspect-video rounded-[8px] overflow-hidden bg-[var(--color-paper)] border border-[var(--color-rule)] shrink-0">
                     {media.thumbnail ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={media.thumbnail}
-                        alt={`Thumbnail preview for ${media.title}`}
+                        alt=""
                         fetchPriority="high"
                         decoding="async"
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[var(--color-muted)]">
-                        <Tv className="w-10 h-10" />
+                        <Tv className="w-8 h-8" />
                       </div>
                     )}
                     {media.duration > 0 && (
-                      <span className="absolute bottom-2.5 right-2.5 bg-[var(--color-paper)] text-[var(--color-ink)] text-xs font-mono tabular-nums px-2.5 py-0.5 rounded-[var(--radius-card)] border border-[var(--color-rule)]">
+                      <span className="absolute bottom-1.5 right-1.5 bg-[#141415]/90 text-[var(--color-ink)] text-[11px] font-mono tabular-nums px-1.5 py-0.5 rounded-[4px] border border-[var(--color-rule)]">
                         {formatDuration(media.duration)}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0 flex flex-col justify-between space-y-4 w-full">
-                    <div className="space-y-2 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-[var(--radius-pill)] text-xs font-semibold border ${theme.pillClasses}`}
-                        >
-                          {PLATFORM_THEMES[media.platform].name.replace(' engine', '')}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between space-y-3 w-full">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono text-[var(--color-ink-2)] bg-[var(--color-paper-3)] border border-[var(--color-rule)] uppercase">
+                          {media.platform}
                         </span>
-                        <span className="text-xs text-[var(--color-muted)] font-medium truncate max-w-[200px] sm:max-w-none">
-                          by {media.uploader}
+                        <span className="text-xs text-[var(--color-muted)] truncate">
+                          {media.uploader}
                         </span>
                       </div>
 
-                      <h2 className="text-base sm:text-xl font-bold text-[var(--color-ink)] line-clamp-2 leading-snug break-words">
+                      <h2
+                        className="text-base font-medium text-[var(--color-ink)] line-clamp-2 leading-snug"
+                        title={media.title}
+                      >
                         {media.title}
                       </h2>
                     </div>
 
+                    {/* Format Category Switcher Tabs */}
                     <div
                       role="tablist"
-                      aria-label="Media format categories"
-                      className="grid grid-cols-2 sm:inline-flex p-1 rounded-[var(--radius-pill)] bg-[var(--color-paper)] border border-[var(--color-rule)] w-full sm:w-fit"
+                      aria-label="Format category"
+                      className="inline-flex p-0.5 rounded-[var(--radius-md)] bg-[var(--color-paper-3)] border border-[var(--color-rule)] w-fit"
                     >
                       {(['video', 'audio'] as const).map((tab) => {
                         const isActive = activeTab === tab;
@@ -654,30 +589,23 @@ export default function MediaDownloader() {
                             role="tab"
                             aria-selected={isActive}
                             onClick={() => setActiveTab(tab)}
-                            className={`relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] rounded-[var(--radius-pill)] text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer ${
-                              isActive ? 'text-[var(--color-accent-ink)]' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${
+                              isActive
+                                ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-sm'
+                                : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                           >
-                            {isActive && (
-                              <motion.div
-                                layoutId="activeMediaTab"
-                                transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
-                                className={`absolute inset-0 rounded-[var(--radius-pill)] ${theme.buttonClasses}`}
-                              />
+                            {tab === 'video' ? (
+                              <>
+                                <Film className="w-3.5 h-3.5" />
+                                <span>Video (MP4)</span>
+                              </>
+                            ) : (
+                              <>
+                                <Music className="w-3.5 h-3.5" />
+                                <span>Audio (MP3)</span>
+                              </>
                             )}
-                            <span className="relative z-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 truncate">
-                              {tab === 'video' ? (
-                                <>
-                                  <Film className="w-3.5 h-3.5 shrink-0" />
-                                  <span className="truncate">Video (MP4)</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Music className="w-3.5 h-3.5 shrink-0" />
-                                  <span className="truncate">Audio (MP3)</span>
-                                </>
-                              )}
-                            </span>
                           </button>
                         );
                       })}
@@ -685,6 +613,7 @@ export default function MediaDownloader() {
                   </div>
                 </div>
 
+                {/* Tactile Segmented Broadcast Level Progress Bar */}
                 <AnimatePresence>
                   {jobProgress && activeFormatId && (
                     <motion.div
@@ -693,21 +622,19 @@ export default function MediaDownloader() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="mt-6 pt-5 border-t border-[var(--color-rule)] space-y-2.5"
+                      className="pt-3 border-t border-[var(--color-rule)] space-y-2"
                     >
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-[var(--color-ink)] font-medium flex items-center gap-2">
+                        <span className="text-[var(--color-ink-2)] font-medium flex items-center gap-2">
                           {jobProgress.status === 'ready' ? (
-                            <CheckCircle2 className="w-4 h-4 text-[var(--color-success)]" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[var(--color-success)]" />
                           ) : (
-                            <Loader2 className="w-4 h-4 animate-spin text-[var(--color-accent)]" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--color-accent)]" />
                           )}
-                          {jobProgress.status === 'starting' && 'Initializing extraction pipeline…'}
-                          {jobProgress.status === 'downloading' &&
-                            'Downloading high-bitrate stream tracks…'}
-                          {jobProgress.status === 'merging' &&
-                            'Muxing video & audio with FFmpeg…'}
-                          {jobProgress.status === 'ready' && 'Stream complete — saving file!'}
+                          {jobProgress.status === 'starting' && 'Initializing stream extraction'}
+                          {jobProgress.status === 'downloading' && 'Downloading stream tracks'}
+                          {jobProgress.status === 'merging' && 'Muxing container with FFmpeg'}
+                          {jobProgress.status === 'ready' && 'Stream complete — saving file'}
                         </span>
                         <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
                           {jobProgress.percent}%
@@ -719,95 +646,80 @@ export default function MediaDownloader() {
                         aria-valuenow={jobProgress.percent}
                         aria-valuemin={0}
                         aria-valuemax={100}
-                        aria-label="Media conversion progress"
-                        className="w-full h-2.5 bg-[var(--color-paper)] rounded-[var(--radius-pill)] overflow-hidden border border-[var(--color-rule)] p-0.5"
+                        aria-label="Conversion progress"
+                        className="w-full h-2 bg-[var(--color-paper-3)] rounded-[4px] overflow-hidden border border-[var(--color-rule)] p-0.5"
                       >
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${jobProgress.percent}%` }}
-                          transition={{ ease: 'easeOut', duration: 0.3 }}
-                          className={`h-full rounded-[var(--radius-pill)] ${theme.buttonClasses}`}
+                        <div
+                          style={{ width: `${jobProgress.percent}%` }}
+                          className="h-full rounded-[2px] bg-[var(--color-accent)] transition-all duration-200"
                         />
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </SpotlightCard>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
-                {filteredFormats.map((format, idx) => {
+              {/* Format Options Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filteredFormats.map((format) => {
                   const sizeText = formatBytes(format.filesizeApprox);
                   const isProcessing = activeFormatId === format.formatId;
 
                   return (
-                    <motion.div
+                    <button
                       key={format.formatId}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
+                      type="button"
+                      disabled={Boolean(activeFormatId)}
+                      onClick={() => !activeFormatId && handleDownloadClick(format)}
+                      aria-label={`Download ${format.label} ${format.ext.toUpperCase()}${
+                        sizeText ? `, approx ${sizeText}` : ''
+                      }`}
+                      className={`w-full p-3.5 rounded-[var(--radius-card)] border bg-[var(--color-paper-2)] text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isProcessing
+                          ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]'
+                          : 'border-[var(--color-rule)] hover:border-[var(--color-rule-2)] hover:bg-[var(--color-paper-3)]/40'
+                      }`}
                     >
-                      <SpotlightCard
-                        as="button"
-                        type="button"
-                        disabled={Boolean(activeFormatId)}
-                        spotlightColor={theme.spotlightRgba}
-                        onClick={() => !activeFormatId && handleDownloadClick(format)}
-                        aria-label={`Download ${format.label} ${format.ext.toUpperCase()}${sizeText ? `, approx ${sizeText}` : ''}`}
-                        className={`w-full p-3.5 sm:p-4 min-h-[72px] cursor-pointer group rounded-[var(--radius-card)] border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] hover:border-[var(--color-rule-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none transition-colors ${
-                          isProcessing
-                            ? 'ring-2 ring-[var(--color-accent)] border-[var(--color-accent)] shadow-lg shadow-[var(--color-accent)]/15'
-                            : activeFormatId
-                            ? 'opacity-50 pointer-events-none'
-                            : ''
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3 sm:gap-4">
-                          <div className="space-y-1 sm:space-y-1.5 min-w-0 text-left">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm sm:text-base font-bold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors truncate">
-                                {format.label}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-semibold text-[var(--color-ink)] truncate">
+                              {format.label}
+                            </span>
+                            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[var(--color-paper-3)] text-[var(--color-ink-2)] border border-[var(--color-rule)]">
+                              {format.ext.toUpperCase()}
+                            </span>
+                            {!format.needsMerge ? (
+                              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[var(--color-paper-3)] text-[var(--color-accent)] border border-[var(--color-rule)]">
+                                Direct stream
                               </span>
-                              {!format.needsMerge ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-paper)] text-[var(--color-accent)] border border-[var(--color-rule)] shrink-0">
-                                  <Zap className="w-3 h-3" />
-                                  Instant
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-paper)] text-[var(--color-ink-2)] border border-[var(--color-rule)] shrink-0">
-                                  HD Mux
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="text-xs text-[var(--color-muted)] truncate flex items-center gap-1.5">
-                              <span>{format.ext.toUpperCase()}</span>
-                              {sizeText && (
-                                <>
-                                  <span className="text-[var(--color-rule-2)]">/</span>
-                                  <span className="tabular-nums">~{sizeText}</span>
-                                </>
-                              )}
-                              <span className="text-[var(--color-rule-2)]">/</span>
-                              <span>
-                                {format.needsMerge
-                                  ? 'FFmpeg Studio Merge'
-                                  : 'Direct Zero-Disk Stream'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div
-                            className="w-11 h-11 sm:w-10 sm:h-10 rounded-[var(--radius-pill)] bg-[var(--color-paper)] border border-[var(--color-rule)] group-hover:border-[var(--color-accent)] group-hover:bg-[var(--color-accent)] flex items-center justify-center text-[var(--color-ink-2)] group-hover:text-[var(--color-accent-ink)] transition-colors duration-300 shrink-0 shadow-inner"
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              <ArrowDownToLine className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[var(--color-paper-3)] text-[var(--color-muted)] border border-[var(--color-rule)]">
+                                Muxed
+                              </span>
                             )}
                           </div>
+
+                          <div className="text-xs font-mono text-[var(--color-muted)] flex items-center gap-1.5">
+                            {sizeText && (
+                              <>
+                                <span>~{sizeText}</span>
+                                <span>·</span>
+                              </>
+                            )}
+                            <span>{format.needsMerge ? 'FFmpeg merge' : 'Instant CDN'}</span>
+                          </div>
                         </div>
-                      </SpotlightCard>
-                    </motion.div>
+
+                        <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-paper-3)] border border-[var(--color-rule)] flex items-center justify-center text-[var(--color-ink-2)] shrink-0">
+                          {isProcessing ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-[var(--color-accent)]" />
+                          ) : (
+                            <ArrowDownToLine className="w-4 h-4" />
+                          )}
+                        </div>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -815,6 +727,7 @@ export default function MediaDownloader() {
           )}
         </AnimatePresence>
 
+        {/* History Deck */}
         <DownloadHistory
           items={history}
           activeUrl={url}
@@ -824,17 +737,17 @@ export default function MediaDownloader() {
           onClearAll={handleClearAllHistory}
         />
 
-        <footer className="pt-6 sm:pt-8 border-t border-[var(--color-rule)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--color-muted)]">
-          <div className="flex items-center gap-2 text-[var(--color-ink-2)]">
-            <span className="w-1.5 h-1.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)]" />
-            <span className="font-medium">Down-link Stream Engine</span>
+        {/* Studio Console Footer */}
+        <footer className="pt-6 border-t border-[var(--color-rule)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--color-muted)]">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
+            <span className="font-medium text-[var(--color-ink-2)]">
+              Down-link Stream Engine
+            </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-center sm:text-right">
-            <span>zero-watermark CDN streaming</span>
-            <span className="text-[var(--color-rule-2)]">/</span>
-            <span>no logs</span>
-            <span className="text-[var(--color-rule-2)]">/</span>
-            <span>high fidelity MP4 & MP3</span>
+
+          <div className="flex items-center gap-2 text-[11px] font-mono text-[var(--color-muted)]">
+            <span>Direct stream & FFmpeg container muxing</span>
           </div>
         </footer>
       </div>

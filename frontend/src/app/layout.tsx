@@ -15,16 +15,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Down-link | All-in-One Media Downloader',
+  title: 'Down-link — Stream Extractor & Media Downloader',
   description:
-    'Download HD videos and MP3 audio from YouTube, Facebook, Instagram, and TikTok with high speed and zero limits.',
+    'Extract and download high-definition video and audio streams from YouTube, TikTok, Instagram, and Facebook.',
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#16111e',
+  themeColor: '#141415',
 };
 
 export default function RootLayout({
@@ -37,7 +37,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col bg-[var(--color-paper)] text-[var(--color-ink)]">{children}</body>
+      <body className="min-h-full flex flex-col bg-[var(--color-paper)] text-[var(--color-ink)] font-sans">
+        {children}
+      </body>
     </html>
   );
 }
