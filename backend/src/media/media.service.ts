@@ -62,6 +62,12 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
   private readonly cleanupTimer: NodeJS.Timeout;
   private readonly extractTimeoutMs = 35000; // 35s max for metadata extraction
   private readonly mergeTimeoutMs = 100000; // 100s max (strictly under Hostinger 120s ceiling)
+  private readonly invidiousCache = new Map<string, { data: any; expiresAt: number }>();
+  private readonly invidiousInstances = [
+    'https://yt.chocolatemoo53.com',
+    'https://invidious.projectsegfau.lt',
+    'https://inv.tux.pizza',
+  ];
 
   constructor(
     private readonly binaryService: BinaryService,
@@ -92,16 +98,32 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
   getMasterCookiePath(): string | null {
     if (fs.existsSync(this.persistentCookiesPath)) {
       try {
-        if (fs.statSync(this.persistentCookiesPath).size >= 10) {
-          return this.persistentCookiesPath;
+        const stats = fs.statSync(this.persistentCookiesPath);
+        if (stats.size >= 10) {
+          const content = fs.readFileSync(this.persistentCookiesPath, 'utf8');
+          if (
+            !content.startsWith('[') &&
+            !content.startsWith('{') &&
+            (content.startsWith('#') || content.includes('\t'))
+          ) {
+            return this.persistentCookiesPath;
+          }
         }
       } catch {}
     }
     const localCookies = path.join(this.cookiesDir, 'cookies.txt');
     if (fs.existsSync(localCookies)) {
       try {
-        if (fs.statSync(localCookies).size >= 10) {
-          return localCookies;
+        const stats = fs.statSync(localCookies);
+        if (stats.size >= 10) {
+          const content = fs.readFileSync(localCookies, 'utf8');
+          if (
+            !content.startsWith('[') &&
+            !content.startsWith('{') &&
+            (content.startsWith('#') || content.includes('\t'))
+          ) {
+            return localCookies;
+          }
         }
       } catch {}
     }
@@ -198,6 +220,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       if (stats.size < 10) {
         return null;
       }
+      this.logger.log(`Using master cookies from ${sourcePath} (${stats.size} bytes)`);
     } catch {
       return null;
     }
@@ -233,18 +256,33 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       throw new ForbiddenException('Invalid or missing admin cookie secret.');
     }
 
-    let fileContent = rawOrBase64Data.trim();
+    let fileContent = (rawOrBase64Data || '').trim();
+
+    // Check raw for JSON
+    if (fileContent.startsWith('[') || fileContent.startsWith('{')) {
+      throw new BadRequestException('Uploaded cookies must be in Netscape format, not JSON.');
+    }
 
     // If payload is base64 encoded, decode it
     if (!fileContent.startsWith('# Netscape') && !fileContent.includes('\t')) {
       try {
-        const decoded = Buffer.from(fileContent, 'base64').toString('utf8');
-        if (decoded.includes('Netscape') || decoded.includes('\t')) {
+        const decoded = Buffer.from(fileContent, 'base64').toString('utf8').trim();
+        if (decoded.includes('Netscape') || decoded.includes('\t') || decoded.startsWith('[') || decoded.startsWith('{')) {
           fileContent = decoded;
         }
       } catch {
         // Keep original text if decoding fails
       }
+    }
+
+    // Check decoded for JSON
+    if (fileContent.startsWith('[') || fileContent.startsWith('{')) {
+      throw new BadRequestException('Uploaded cookies must be in Netscape format, not JSON.');
+    }
+
+    // Check if it has Netscape comments or tab-delimited cookie rows
+    if (!fileContent.startsWith('#') && !fileContent.includes('\t')) {
+      throw new BadRequestException('Uploaded cookies must be in Netscape format, not JSON.');
     }
 
     fileContent = this.sanitizeCookieContent(fileContent);
@@ -289,6 +327,11 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     for (const [token, entry] of this.streamCache.entries()) {
       if (entry.expiresAt <= now) {
         this.streamCache.delete(token);
+      }
+    }
+    for (const [id, entry] of this.invidiousCache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.invidiousCache.delete(id);
       }
     }
   }
@@ -356,28 +399,31 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
   private formatYtDlpError(stderr: string): string {
     const lower = stderr.toLowerCase();
+    const rawErrorLine = stderr
+      .trim()
+      .split('\n')
+      .reverse()
+      .find((line) => line.includes('ERROR:'))
+      ?.replace(/^.*ERROR:\s*(\[[^\]]+\]\s*[^:]+:\s*)?/i, '')
+      .slice(0, 220);
+
     if (lower.includes('requested format is not available')) {
-      return 'The requested format is not available for this media. Please select another quality or option.';
+      return `The requested format is not available for this media. Please select another quality or option.${rawErrorLine ? ` (${rawErrorLine})` : ''}`;
     }
     if (lower.includes('page needs to be reloaded') || lower.includes('unplayable')) {
-      return 'YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.';
+      return `YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.${rawErrorLine ? ` (${rawErrorLine})` : ''}`;
     }
     if (lower.includes('sign in to confirm') || lower.includes('not a bot')) {
-      return 'YouTube blocked the server IP. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
+      return `YouTube blocked the server IP. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.${rawErrorLine ? ` (${rawErrorLine})` : ''}`;
     }
     if (lower.includes('login required') || lower.includes('rate-limit reached')) {
-      return 'This platform requires authentication. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
+      return `This platform requires authentication. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.${rawErrorLine ? ` (${rawErrorLine})` : ''}`;
     }
     if (lower.includes('failed to map segment') || lower.includes('permission denied')) {
       return 'Server binary execution restricted (TMPDIR noexec).';
     }
-    const lastLine = stderr
-      .trim()
-      .split('\n')
-      .reverse()
-      .find((line) => line.includes('ERROR:'));
-    if (lastLine) {
-      return lastLine.replace(/^.*ERROR:\s*(\[[^\]]+\]\s*[^:]+:\s*)?/i, '').slice(0, 180);
+    if (rawErrorLine) {
+      return rawErrorLine;
     }
     return 'Could not fetch media details. The post may be private or removed.';
   }
@@ -431,9 +477,15 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getYoutubeExtractorArgs(hasCookies: boolean): string[] {
+    if (hasCookies) {
+      return [
+        '--extractor-args',
+        'youtube:player_client=web_creator,tv,mweb',
+      ];
+    }
     return [
       '--extractor-args',
-      'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb',
+      'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs',
     ];
   }
 
@@ -563,6 +615,366 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private extractYoutubeVideoId(url: string): string | null {
+    try {
+      const parsed = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+      if (parsed.searchParams.has('v')) {
+        return parsed.searchParams.get('v');
+      }
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if (/(^|\.)youtu\.be$/i.test(parsed.hostname) && parts.length > 0) {
+        return parts[0];
+      }
+      if (parts.length > 1 && ['shorts', 'live', 'embed'].includes(parts[0])) {
+        return parts[1];
+      }
+      return parts[parts.length - 1] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchInvidiousVideoData(videoId: string): Promise<any> {
+    const cached = this.invidiousCache.get(videoId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
+    for (const base of this.invidiousInstances) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+        const res = await fetch(`${base}/api/v1/videos/${videoId}`, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeout));
+
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data && (data.adaptiveFormats?.length || data.formatStreams?.length)) {
+          this.invidiousCache.set(videoId, {
+            data,
+            expiresAt: Date.now() + 15 * 60 * 1000,
+          });
+          return data;
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Invidious instance ${base} failed for ${videoId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    throw new BadRequestException('Could not fetch YouTube media details from fallback servers.');
+  }
+
+  private async extractYoutubeFallback(cleanUrl: string): Promise<MediaInfoResponse> {
+    const videoId = this.extractYoutubeVideoId(cleanUrl);
+    if (!videoId) {
+      throw new BadRequestException('Could not parse YouTube video ID.');
+    }
+
+    const data = await this.fetchInvidiousVideoData(videoId);
+    const title = data.title || 'YouTube Video';
+    const thumbnail = data.videoThumbnails?.[0]?.url || '';
+    const duration = Number(data.lengthSeconds) || 0;
+    const uploader = data.author || 'YouTube Creator';
+
+    const formats: CleanFormat[] = [];
+    const seenHeights = new Set<string>();
+
+    // 1. Progressive streams (if available)
+    for (const f of data.formatStreams || []) {
+      if (f.url && f.resolution) {
+        const height = parseInt(f.resolution, 10);
+        const key = `${height}p`;
+        if (!seenHeights.has(key)) {
+          seenHeights.add(key);
+          const token = crypto.randomBytes(16).toString('hex');
+          const ext = f.container || 'mp4';
+          this.streamCache.set(token, {
+            targetUrl: f.url,
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              Referer: 'https://www.youtube.com/',
+            },
+            filename: this.sanitizeFilename(title, ext),
+            mimeType: ext === 'webm' ? 'video/webm' : 'video/mp4',
+            expiresAt: Date.now() + this.cacheTtlMs,
+          });
+
+          formats.push({
+            formatId: `youtube-fallback-direct-${f.itag || f.resolution}`,
+            label: `${f.resolution} ${ext.toUpperCase()} (Instant Stream)`,
+            ext,
+            type: 'video',
+            resolution: f.resolution,
+            needsMerge: false,
+            streamToken: token,
+          });
+        }
+      }
+    }
+
+    // 2. High-res adaptive video formats (needsMerge: true)
+    const videoFormats = (data.adaptiveFormats || []).filter(
+      (f: any) => f.type?.includes('video') && f.resolution,
+    );
+
+    for (const f of videoFormats) {
+      const height = parseInt(f.resolution, 10);
+      if (isNaN(height)) continue;
+      const key = `${height}p`;
+      if (!seenHeights.has(key)) {
+        seenHeights.add(key);
+        formats.push({
+          formatId: `youtube-fallback-${key}`,
+          label: `${key} HD MP4`,
+          ext: 'mp4',
+          type: 'video',
+          resolution: key,
+          filesizeApprox: Number(f.contentLength || f.size) || undefined,
+          needsMerge: true,
+        });
+      }
+    }
+
+    // If no specific video formats were found, add general best quality
+    if (!formats.some((f) => f.type === 'video')) {
+      formats.push({
+        formatId: 'youtube-fallback-best',
+        label: 'HD Video (Best Quality)',
+        ext: 'mp4',
+        type: 'video',
+        resolution: 'HD',
+        needsMerge: true,
+      });
+    }
+
+    // 3. Audio format
+    formats.push({
+      formatId: 'youtube-fallback-audio',
+      label: 'MP3 Audio (High Quality)',
+      ext: 'mp3',
+      type: 'audio',
+      needsMerge: true,
+    });
+
+    formats.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'video' ? -1 : 1;
+      const resA = parseInt(a.resolution || '0', 10) || 720;
+      const resB = parseInt(b.resolution || '0', 10) || 720;
+      return resB - resA;
+    });
+
+    return {
+      platform: 'youtube',
+      title,
+      thumbnail,
+      duration,
+      uploader,
+      formats,
+    };
+  }
+
+  private async prepareYoutubeFallbackFile(
+    cleanUrl: string,
+    formatId: string,
+    type: 'video' | 'audio',
+    jobId?: string,
+    abortSignal?: AbortSignal,
+  ): Promise<{ filePath: string; filename: string; mimeType: string }> {
+    const videoId = this.extractYoutubeVideoId(cleanUrl);
+    if (!videoId) {
+      throw new BadRequestException('Invalid YouTube URL.');
+    }
+
+    const rawData = await this.fetchInvidiousVideoData(videoId);
+    const title = rawData.title || 'YouTube Video';
+    const ext = type === 'audio' ? 'mp3' : 'mp4';
+    const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const finalPath = path.join(this.tempDir, `${uniqueId}.${ext}`);
+
+    this.emitProgress(jobId, { status: 'starting', percent: 10 });
+
+    const cleanupTempArtifacts = () => {
+      try {
+        if (fs.existsSync(finalPath)) {
+          fs.unlinkSync(finalPath);
+        }
+      } catch {}
+    };
+
+    const audioFormats = (rawData.adaptiveFormats || []).filter(
+      (f: any) => f.type?.includes('audio') || f.container === 'm4a',
+    );
+    const bestAudio =
+      audioFormats.find((f: any) => String(f.itag) === '140') ||
+      audioFormats[0];
+
+    const ffmpegArgs: string[] = ['-y'];
+
+    if (type === 'audio') {
+      if (!bestAudio?.url) {
+        throw new BadRequestException('Audio stream not available for this YouTube video.');
+      }
+      ffmpegArgs.push(
+        '-i',
+        bestAudio.url,
+        '-vn',
+        '-c:a',
+        'libmp3lame',
+        '-q:a',
+        '2',
+        finalPath,
+      );
+    } else {
+      const targetResMatch = formatId.match(/youtube-fallback-(\d+p)/);
+      const targetRes = targetResMatch ? targetResMatch[1] : null;
+
+      const videoFormats = (rawData.adaptiveFormats || []).filter(
+        (f: any) => f.type?.includes('video') && f.url,
+      );
+
+      let chosenVideo = targetRes
+        ? videoFormats.find((f: any) => f.resolution === targetRes && f.container === 'mp4') ||
+          videoFormats.find((f: any) => f.resolution === targetRes)
+        : null;
+
+      if (!chosenVideo) {
+        chosenVideo = videoFormats[0];
+      }
+
+      if (!chosenVideo?.url) {
+        throw new BadRequestException('Video stream not available for this YouTube video.');
+      }
+
+      if (bestAudio?.url) {
+        ffmpegArgs.push(
+          '-i',
+          chosenVideo.url,
+          '-i',
+          bestAudio.url,
+          '-c:v',
+          'copy',
+          '-c:a',
+          'aac',
+          '-movflags',
+          '+faststart',
+          finalPath,
+        );
+      } else {
+        ffmpegArgs.push(
+          '-i',
+          chosenVideo.url,
+          '-c',
+          'copy',
+          '-movflags',
+          '+faststart',
+          finalPath,
+        );
+      }
+    }
+
+    this.emitProgress(jobId, { status: 'downloading', percent: 30 });
+
+    await this.concurrency.run(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const child = spawn(this.binaryService.ffmpegBinaryPath, ffmpegArgs, {
+            shell: false,
+            env: this.binaryService.spawnEnv,
+          });
+
+          let isDone = false;
+          let stderr = '';
+          let timer: NodeJS.Timeout | undefined;
+
+          const abortHandler = () => {
+            if (isDone) return;
+            isDone = true;
+            if (timer) clearTimeout(timer);
+            try {
+              child.kill('SIGKILL');
+            } catch {}
+            cleanupTempArtifacts();
+            reject(new BadRequestException('Download cancelled by client.'));
+          };
+
+          if (abortSignal) {
+            if (abortSignal.aborted) {
+              abortHandler();
+              return;
+            }
+            abortSignal.addEventListener('abort', abortHandler, { once: true });
+          }
+
+          timer = setTimeout(() => {
+            if (isDone) return;
+            isDone = true;
+            try {
+              child.kill('SIGKILL');
+            } catch {}
+            cleanupTempArtifacts();
+            this.emitProgress(jobId, {
+              status: 'error',
+              percent: 0,
+              message: 'Processing timed out.',
+            });
+            reject(new GatewayTimeoutException('Media processing exceeded maximum allowable time.'));
+          }, this.mergeTimeoutMs);
+          timer.unref();
+
+          child.stderr.on('data', (chunk) => {
+            stderr += chunk.toString();
+            this.emitProgress(jobId, { status: 'merging', percent: 75 });
+          });
+
+          child.on('close', (code) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+            if (abortSignal) {
+              abortSignal.removeEventListener('abort', abortHandler);
+            }
+
+            if (code !== 0 || !fs.existsSync(finalPath)) {
+              cleanupTempArtifacts();
+              this.logger.warn(`FFmpeg fallback merge failed: ${stderr.trim().slice(0, 300)}`);
+              this.emitProgress(jobId, {
+                status: 'error',
+                percent: 0,
+                message: 'Failed to process media file.',
+              });
+              return reject(new BadRequestException('Failed to process media file.'));
+            }
+
+            this.emitProgress(jobId, { status: 'ready', percent: 100 });
+            resolve();
+          });
+
+          child.on('error', (err) => {
+            if (isDone) return;
+            isDone = true;
+            clearTimeout(timer);
+            cleanupTempArtifacts();
+            this.logger.error(`FFmpeg process error: ${err.message}`);
+            reject(new BadRequestException('Failed to execute media converter process.'));
+          });
+        }),
+    );
+
+    return {
+      filePath: finalPath,
+      filename: this.sanitizeFilename(title, ext),
+      mimeType: type === 'audio' ? 'audio/mpeg' : 'video/mp4',
+    };
+  }
+
   private async runYtDlpExtract(
     targetUrl: string,
     platform: SupportedPlatform,
@@ -585,9 +997,16 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       this.binaryService.ffmpegBinaryPath,
     ];
 
+    if (process.env.PROXY_URL && process.env.PROXY_URL.trim()) {
+      args.push('--proxy', process.env.PROXY_URL.trim());
+    }
+
     if (platform === 'youtube') {
       const clientArg =
-        youtubeClientArg || 'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb';
+        youtubeClientArg ||
+        (useCookies
+          ? 'youtube:player_client=web_creator,tv,mweb'
+          : 'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs');
       args.push(
         '--extractor-args',
         clientArg,
@@ -623,6 +1042,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             new GatewayTimeoutException('Media analysis timed out. The platform may be throttling requests.'),
           );
         }, this.extractTimeoutMs);
+        timer.unref();
 
         child.stdout.on('data', (chunk) => (stdout += chunk.toString()));
         child.stderr.on('data', (chunk) => (stderr += chunk.toString()));
@@ -674,12 +1094,13 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
       if (platform === 'youtube') {
         const hasCookies = this.hasConfiguredCookies();
-        const primaryClients = 'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb';
-        const fallbackClients = 'youtube:player_client=tv_samsung,visionos,web_embedded';
+        const primaryClients = 'youtube:player_client=web_creator,tv,mweb';
+        const fallbackClients =
+          'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs';
 
         if (hasCookies) {
           // When hasCookies === true:
-          // Attempt 1: Run WITH cookies and modern client suite
+          // Attempt 1: Run WITH cookies and primary client suite
           try {
             raw = await this.runYtDlpExtract(
               cleanUrl,
@@ -692,47 +1113,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             this.logger.warn(
               `YouTube Attempt 1 (with cookies) failed: ${err instanceof Error ? err.message : String(err)}. Retrying without cookies...`,
             );
-            // Attempt 2: Run WITHOUT cookies with primary clients
-            try {
-              raw = await this.runYtDlpExtract(
-                cleanUrl,
-                platform,
-                false,
-                primaryClients,
-              );
-            } catch (err2) {
-              this.logger.warn(
-                `YouTube Attempt 2 (cookie-free) failed: ${err2 instanceof Error ? err2.message : String(err2)}. Retrying with fallback clients...`,
-              );
-              // Attempt 3: Run WITHOUT cookies with fallback clients
-              try {
-                raw = await this.runYtDlpExtract(
-                  cleanUrl,
-                  platform,
-                  false,
-                  fallbackClients,
-                );
-              } catch (err3) {
-                throw err3 || err2 || firstError;
-              }
-            }
-          }
-        } else {
-          // When hasCookies === false:
-          // Attempt 1: Run WITHOUT cookies with primary clients
-          try {
-            raw = await this.runYtDlpExtract(
-              cleanUrl,
-              platform,
-              false,
-              primaryClients,
-            );
-          } catch (err) {
-            firstError = err;
-            this.logger.warn(
-              `YouTube Attempt 1 (cookie-free) failed: ${err instanceof Error ? err.message : String(err)}. Retrying with fallback clients...`,
-            );
-            // Attempt 2 (Fallback): Run WITHOUT cookies with fallback clients
+            // Attempt 2: Run WITHOUT cookies with fallback clients
             try {
               raw = await this.runYtDlpExtract(
                 cleanUrl,
@@ -741,7 +1122,41 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
                 fallbackClients,
               );
             } catch (err2) {
-              throw err2 || firstError;
+              this.logger.warn(
+                `YouTube Attempt 2 (cookie-free) failed: ${err2 instanceof Error ? err2.message : String(err2)}. Trying native datacenter fallback...`,
+              );
+              try {
+                return await this.extractYoutubeFallback(cleanUrl);
+              } catch (fallbackErr) {
+                this.logger.error(
+                  `YouTube fallback failed: ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`,
+                );
+                throw err2 || firstError;
+              }
+            }
+          }
+        } else {
+          // When hasCookies === false:
+          // Attempt 1: Run WITHOUT cookies with fallback clients
+          try {
+            raw = await this.runYtDlpExtract(
+              cleanUrl,
+              platform,
+              false,
+              fallbackClients,
+            );
+          } catch (err) {
+            firstError = err;
+            this.logger.warn(
+              `YouTube Attempt 1 (cookie-free) failed: ${err instanceof Error ? err.message : String(err)}. Trying native datacenter fallback...`,
+            );
+            try {
+              return await this.extractYoutubeFallback(cleanUrl);
+            } catch (fallbackErr) {
+              this.logger.error(
+                `YouTube fallback failed: ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`,
+              );
+              throw firstError;
             }
           }
         }
@@ -938,6 +1353,17 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     const outputTemplate = path.join(this.tempDir, `${uniqueId}.%(ext)s`);
     const finalPath = path.join(this.tempDir, `${uniqueId}.${ext}`);
 
+    // If format is from YouTube fallback service, handle direct stream retrieval & ffmpeg mux
+    if (formatId.startsWith('youtube-fallback-')) {
+      return await this.prepareYoutubeFallbackFile(
+        cleanUrl,
+        formatId,
+        type,
+        jobId,
+        abortSignal,
+      );
+    }
+
     // If format is from TikTok fallback service, handle direct stream retrieval
     if (formatId.startsWith('tiktok-')) {
       const meta = await this.extractTikTokFallback(cleanUrl);
@@ -999,8 +1425,14 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             outputTemplate,
           ];
 
+          if (process.env.PROXY_URL && process.env.PROXY_URL.trim()) {
+            args.push('--proxy', process.env.PROXY_URL.trim());
+          }
+
           if (platform === 'youtube') {
-            const clientArg = 'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb';
+            const clientArg = tempCookie
+              ? 'youtube:player_client=web_creator,tv,mweb'
+              : 'youtube:player_client=tv_embedded,android_vr,ios;player_skip=webpage,configs';
             args.push(
               '--extractor-args',
               clientArg,
@@ -1028,10 +1460,12 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           });
           let isDone = false;
           let stderr = '';
+          let timer: NodeJS.Timeout | undefined;
 
           const abortHandler = () => {
             if (isDone) return;
             isDone = true;
+            if (timer) clearTimeout(timer);
             this.removeTempCookieFile(tempCookie);
             this.logger.log(`Client aborted download job ${uniqueId}; killing child process`);
             try {
@@ -1049,7 +1483,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             abortSignal.addEventListener('abort', abortHandler, { once: true });
           }
 
-          const timer = setTimeout(() => {
+          timer = setTimeout(() => {
             if (isDone) return;
             isDone = true;
             this.removeTempCookieFile(tempCookie);
@@ -1066,6 +1500,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
               new GatewayTimeoutException('Media processing exceeded maximum allowable time.'),
             );
           }, this.mergeTimeoutMs);
+          timer.unref();
 
           child.stdout.on('data', (chunk) => {
             const line = chunk.toString();

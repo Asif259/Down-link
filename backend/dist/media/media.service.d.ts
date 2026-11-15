@@ -41,6 +41,8 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     private readonly cleanupTimer;
     private readonly extractTimeoutMs;
     private readonly mergeTimeoutMs;
+    private readonly invidiousCache;
+    private readonly invidiousInstances;
     constructor(binaryService: BinaryService, concurrency: ConcurrencyService);
     onModuleInit(): void;
     onModuleDestroy(): void;
@@ -73,6 +75,10 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     private normalizeMediaUrl;
     private getYoutubeExtractorArgs;
     private extractTikTokFallback;
+    private extractYoutubeVideoId;
+    private fetchInvidiousVideoData;
+    private extractYoutubeFallback;
+    private prepareYoutubeFallbackFile;
     private runYtDlpExtract;
     extractMetadata(url: string): Promise<MediaInfoResponse>;
     private normalizeFormats;
