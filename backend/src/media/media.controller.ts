@@ -18,7 +18,7 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import { map, Observable } from 'rxjs';
-import { DownloadQueryDto, ExtractMediaDto, UpdateCookiesDto } from './dto/media.dto';
+import { DownloadQueryDto, ExtractMediaDto, UpdateBinaryDto, UpdateCookiesDto } from './dto/media.dto';
 import { MediaService } from './media.service';
 import { StreamProxyService } from './stream-proxy.service';
 import { BinaryService } from '../binary/binary.service';
@@ -56,6 +56,13 @@ export class MediaController {
   @HttpCode(HttpStatus.OK)
   async updateCookies(@Body() dto: UpdateCookiesDto) {
     return this.mediaService.updateMasterCookies(dto.secret, dto.cookies);
+  }
+
+  @SkipThrottle() // Bypass rate limiting for admin binary updates
+  @Post('update-binary')
+  @HttpCode(HttpStatus.OK)
+  async updateBinary(@Body() dto: UpdateBinaryDto) {
+    return this.mediaService.updateBinary(dto.secret);
   }
 
   // Zero-disk Direct CDN Stream Proxy for TikTok, Instagram Reels, and 360p/720p progressive MP4s

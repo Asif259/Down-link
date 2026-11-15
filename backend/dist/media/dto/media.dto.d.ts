@@ -11,3 +11,6 @@ export declare class UpdateCookiesDto {
     secret: string;
     cookies: string;
 }
+export declare class UpdateBinaryDto {
+    secret: string;
+}

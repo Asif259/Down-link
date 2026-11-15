@@ -99,6 +99,7 @@ describe('MediaController (e2e)', () => {
         ytDlpPath: '/mock/bin/yt-dlp',
         ffmpegBinaryPath: '/mock/bin/ffmpeg',
         spawnEnv: { ...process.env, TMPDIR: '/tmp', TEMP: '/tmp', TMP: '/tmp' },
+        updateYtDlpBinary: jest.fn().mockResolvedValue('yt-dlp is up to date (2026.10.26)'),
         onModuleInit: jest.fn(),
         onModuleDestroy: jest.fn(),
       })
@@ -385,6 +386,47 @@ describe('MediaController (e2e)', () => {
       const cookiesPath = path.join(process.cwd(), 'cookies', 'cookies.txt');
       expect(fs.existsSync(cookiesPath)).toBe(true);
       expect(fs.readFileSync(cookiesPath, 'utf8')).toBe(cookieText);
+    });
+  });
+
+  describe('POST /api/media/update-binary', () => {
+    const adminSecret = 'super_secret_e2e_key_123';
+    const originalSecret = process.env.ADMIN_COOKIE_SECRET;
+
+    beforeAll(() => {
+      process.env.ADMIN_COOKIE_SECRET = adminSecret;
+    });
+
+    afterAll(() => {
+      if (originalSecret === undefined) {
+        delete process.env.ADMIN_COOKIE_SECRET;
+      } else {
+        process.env.ADMIN_COOKIE_SECRET = originalSecret;
+      }
+    });
+
+    it('rejects with 403 Forbidden when secret is invalid or missing', async () => {
+      await request(app.getHttpServer())
+        .post('/api/media/update-binary')
+        .send({
+          secret: 'wrong_secret',
+        })
+        .expect(403);
+    });
+
+    it('returns 200 OK and triggers binary update when valid secret is provided', async () => {
+      const binaryService = app.get<BinaryService>(BinaryService);
+      jest.spyOn(binaryService, 'updateYtDlpBinary').mockResolvedValue('yt-dlp is up to date (2026.10.26)');
+
+      const res = await request(app.getHttpServer())
+        .post('/api/media/update-binary')
+        .send({
+          secret: adminSecret,
+        })
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toBe('yt-dlp is up to date (2026.10.26)');
     });
   });
 });

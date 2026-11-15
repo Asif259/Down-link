@@ -50,6 +50,10 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
         message: string;
         bytesWritten: number;
     }>;
+    updateBinary(secret: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     private purgeExpiredTokens;
     cleanStaleTempFiles(maxAgeMs?: number): void;
     getStreamOptions(token: string): StreamProxyOptions;

@@ -218,7 +218,40 @@ describe('MediaService', () => {
     });
   });
 
+  describe('updateBinary', () => {
+    const validSecret = 'test_admin_secret_123';
+    const originalSecret = process.env.ADMIN_COOKIE_SECRET;
+
+    beforeEach(() => {
+      process.env.ADMIN_COOKIE_SECRET = validSecret;
+    });
+
+    afterEach(() => {
+      if (originalSecret === undefined) {
+        delete process.env.ADMIN_COOKIE_SECRET;
+      } else {
+        process.env.ADMIN_COOKIE_SECRET = originalSecret;
+      }
+    });
+
+    it('throws ForbiddenException when secret does not match', async () => {
+      await expect(service.updateBinary('wrong_secret')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('delegates to binaryService.updateYtDlpBinary when secret is valid', async () => {
+      jest.spyOn(binaryService, 'updateYtDlpBinary').mockResolvedValue('yt-dlp is up to date (2026.10.26)');
+      const res = await service.updateBinary(validSecret);
+      expect(res.success).toBe(true);
+      expect(res.message).toBe('yt-dlp is up to date (2026.10.26)');
+    });
+  });
+
   describe('formatYtDlpError', () => {
+    it('returns YouTube challenge warning when page needs to be reloaded or unplayable', () => {
+      const msg = (service as any).formatYtDlpError('ERROR: [youtube] dQw4w9WgXcQ: The page needs to be reloaded.');
+      expect(msg).toContain('YouTube challenged the request format for this server IP');
+    });
+
     it('returns YouTube bot warning when stderr indicates bot challenge or sign in', () => {
       const msg = (service as any).formatYtDlpError('Sign in to confirm you’re not a bot');
       expect(msg).toContain('YouTube blocked the server IP');
@@ -250,22 +283,22 @@ describe('MediaService', () => {
   });
 
   describe('getYoutubeExtractorArgs', () => {
-    it('returns web, mweb, and tv client when hasCookies is true', () => {
+    it('returns web, mweb, and web_embedded client when hasCookies is true', () => {
       const args = (service as any).getYoutubeExtractorArgs(true);
-      expect(args).toEqual(['--extractor-args', 'youtube:player_client=web,mweb,tv']);
+      expect(args).toEqual(['--extractor-args', 'youtube:player_client=web,mweb,web_embedded']);
     });
 
-    it('returns android_vr, tv, ios and skips webpage/configs when hasCookies is false', () => {
+    it('returns android_vr, android, ios and skips webpage/configs when hasCookies is false', () => {
       const args = (service as any).getYoutubeExtractorArgs(false);
       expect(args).toEqual([
         '--extractor-args',
-        'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+        'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
       ]);
     });
   });
 
   describe('extractMetadata & prepareMergedFile spawn options', () => {
-    it('spawns yt-dlp with cache-dir, anti-bot extractor-args for youtube, and spawnEnv without cookies', async () => {
+    it('spawns yt-dlp with force-ipv4, cache-dir, anti-bot extractor-args for youtube, and spawnEnv without cookies', async () => {
       const mockChild = new EventEmitter() as any;
       mockChild.stdout = new EventEmitter();
       mockChild.stderr = new EventEmitter();
@@ -278,12 +311,13 @@ describe('MediaService', () => {
         binaryService.ytDlpPath,
         expect.arrayContaining([
           '--dump-single-json',
+          '--force-ipv4',
           '--cache-dir',
           path.join(process.cwd(), 'temp', '.cache'),
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+          'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]),
         {
@@ -309,7 +343,7 @@ describe('MediaService', () => {
       spawnSpy.mockRestore();
     });
 
-    it('spawns yt-dlp with web/tv player client when cookies exist', async () => {
+    it('spawns yt-dlp with web/embedded player client when cookies exist', async () => {
       const mockChild = new EventEmitter() as any;
       mockChild.stdout = new EventEmitter();
       mockChild.stderr = new EventEmitter();
@@ -325,8 +359,9 @@ describe('MediaService', () => {
       expect(spawnSpy).toHaveBeenCalledWith(
         binaryService.ytDlpPath,
         expect.arrayContaining([
+          '--force-ipv4',
           '--extractor-args',
-          'youtube:player_client=web,mweb,tv',
+          'youtube:player_client=web,mweb,web_embedded',
           '--cookies',
         ]),
         expect.anything(),
@@ -386,12 +421,13 @@ describe('MediaService', () => {
         expect.arrayContaining([
           '--ffmpeg-location',
           binaryService.ffmpegBinaryPath,
+          '--force-ipv4',
           '--cache-dir',
           path.join(process.cwd(), 'temp', '.cache'),
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+          'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
           '--merge-output-format',
           'mp4',
         ]),

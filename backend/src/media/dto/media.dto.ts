@@ -36,3 +36,10 @@ export class UpdateCookiesDto {
   @IsNotEmpty()
   cookies: string; // Accepts raw text or base64 string
 }
+
+export class UpdateBinaryDto {
+  @IsString()
+  @IsNotEmpty()
+  secret: string;
+}
+

@@ -185,6 +185,18 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  async updateBinary(secret: string) {
+    const expectedSecret = process.env.ADMIN_COOKIE_SECRET;
+    if (!expectedSecret || secret !== expectedSecret) {
+      throw new ForbiddenException('Invalid or missing admin cookie secret.');
+    }
+    const message = await this.binaryService.updateYtDlpBinary();
+    return {
+      success: true,
+      message,
+    };
+  }
+
   private purgeExpiredTokens(): void {
     const now = Date.now();
     for (const [token, entry] of this.streamCache.entries()) {
@@ -257,11 +269,14 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
 
   private formatYtDlpError(stderr: string): string {
     const lower = stderr.toLowerCase();
+    if (lower.includes('page needs to be reloaded') || lower.includes('unplayable')) {
+      return 'YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.';
+    }
     if (lower.includes('sign in to confirm') || lower.includes('not a bot')) {
-      return 'YouTube blocked the server IP. Please configure COOKIES_BASE64 in Hostinger environment variables.';
+      return 'YouTube blocked the server IP. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
     }
     if (lower.includes('login required') || lower.includes('rate-limit reached')) {
-      return 'This platform requires authentication. Please configure COOKIES_BASE64 in Hostinger environment variables.';
+      return 'This platform requires authentication. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
     }
     if (lower.includes('failed to map segment') || lower.includes('permission denied')) {
       return 'Server binary execution restricted (TMPDIR noexec).';
@@ -281,12 +296,12 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     if (hasCookies) {
       return [
         '--extractor-args',
-        'youtube:player_client=web,mweb,tv',
+        'youtube:player_client=web,mweb,web_embedded',
       ];
     }
     return [
       '--extractor-args',
-      'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+      'youtube:player_client=android_vr,android,ios;player_skip=webpage,configs',
     ];
   }
 
@@ -307,6 +322,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             '--dump-single-json',
             '--no-playlist',
             '--no-warnings',
+            '--force-ipv4',
             '--cache-dir',
             cacheDir,
             '--no-check-certificates',
@@ -505,6 +521,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
             '--newline',
             '--ffmpeg-location',
             this.binaryService.ffmpegBinaryPath,
+            '--force-ipv4',
             '--cache-dir',
             cacheDir,
             '--no-check-certificates',

@@ -44,6 +44,9 @@ let MediaController = class MediaController {
     async updateCookies(dto) {
         return this.mediaService.updateMasterCookies(dto.secret, dto.cookies);
     }
+    async updateBinary(dto) {
+        return this.mediaService.updateBinary(dto.secret);
+    }
     streamDirect(token, req, res) {
         if (!/^[a-f0-9]{32}$/.test(token)) {
             throw new common_1.BadRequestException('Invalid stream token.');
@@ -125,6 +128,15 @@ __decorate([
     __metadata("design:paramtypes", [media_dto_1.UpdateCookiesDto]),
     __metadata("design:returntype", Promise)
 ], MediaController.prototype, "updateCookies", null);
+__decorate([
+    (0, throttler_1.SkipThrottle)(),
+    (0, common_1.Post)('update-binary'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [media_dto_1.UpdateBinaryDto]),
+    __metadata("design:returntype", Promise)
+], MediaController.prototype, "updateBinary", null);
 __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 15, ttl: 60000 } }),
     (0, common_1.Get)('stream/:token'),

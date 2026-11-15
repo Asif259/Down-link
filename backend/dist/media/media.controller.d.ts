@@ -1,7 +1,7 @@
 import { MessageEvent } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Observable } from 'rxjs';
-import { DownloadQueryDto, ExtractMediaDto, UpdateCookiesDto } from './dto/media.dto';
+import { DownloadQueryDto, ExtractMediaDto, UpdateBinaryDto, UpdateCookiesDto } from './dto/media.dto';
 import { MediaService } from './media.service';
 import { StreamProxyService } from './stream-proxy.service';
 import { BinaryService } from '../binary/binary.service';
@@ -24,6 +24,10 @@ export declare class MediaController {
         success: boolean;
         message: string;
         bytesWritten: number;
+    }>;
+    updateBinary(dto: UpdateBinaryDto): Promise<{
+        success: boolean;
+        message: string;
     }>;
     streamDirect(token: string, req: Request, res: Response): void;
     streamProgress(jobId: string, res?: Response): Observable<MessageEvent>;

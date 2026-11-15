@@ -14,7 +14,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "package:hostinger": "npm run build && zip -r ../backend-deploy.zip dist src package.json package-lock.json tsconfig.json nest-cli.json -x \"*.DS_Store*\"",
-    "test": "jest",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json"

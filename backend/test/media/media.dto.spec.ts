@@ -1,6 +1,6 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { DownloadQueryDto, ExtractMediaDto, UpdateCookiesDto } from '../../src/media/dto/media.dto';
+import { DownloadQueryDto, ExtractMediaDto, UpdateBinaryDto, UpdateCookiesDto } from '../../src/media/dto/media.dto';
 
 describe('Media DTOs', () => {
   describe('ExtractMediaDto', () => {
@@ -109,6 +109,24 @@ describe('Media DTOs', () => {
       const dto = plainToInstance(UpdateCookiesDto, {
         secret: 'admin123',
         cookies: '',
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('UpdateBinaryDto', () => {
+    it('should validate when secret is a non-empty string', async () => {
+      const dto = plainToInstance(UpdateBinaryDto, {
+        secret: 'admin123',
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
+    });
+
+    it('should reject missing or empty secret', async () => {
+      const dto = plainToInstance(UpdateBinaryDto, {
+        secret: '',
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

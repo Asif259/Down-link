@@ -36,6 +36,10 @@ describe('MediaController', () => {
         message: 'Master cookies.txt successfully updated.',
         bytesWritten: 123,
       }),
+      updateBinary: jest.fn().mockResolvedValue({
+        success: true,
+        message: 'yt-dlp is up to date (2026.10.26)',
+      }),
     };
 
     streamProxyService = {
@@ -141,5 +145,22 @@ describe('MediaController', () => {
 
     const cookiesSkip = Reflect.getMetadata('THROTTLER:SKIPdefault', MediaController.prototype.updateCookies);
     expect(cookiesSkip).toBe(true);
+  });
+
+  it('should delegate updateBinary to MediaService with SkipThrottle', async () => {
+    const updateSpy = (mediaService.updateBinary as jest.Mock).mockResolvedValue({
+      success: true,
+      message: 'yt-dlp is up to date (2026.10.26)',
+    });
+
+    const result = await controller.updateBinary({
+      secret: 'secret123',
+    });
+
+    expect(updateSpy).toHaveBeenCalledWith('secret123');
+    expect(result.success).toBe(true);
+
+    const binarySkip = Reflect.getMetadata('THROTTLER:SKIPdefault', MediaController.prototype.updateBinary);
+    expect(binarySkip).toBe(true);
   });
 });
