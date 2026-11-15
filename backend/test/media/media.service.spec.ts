@@ -330,19 +330,17 @@ describe('MediaService', () => {
   });
 
   describe('getYoutubeExtractorArgs', () => {
-    it('returns web and tv clients when hasCookies is true', () => {
-      const args = (service as any).getYoutubeExtractorArgs(true);
-      expect(args).toEqual([
+    it('returns robust mobile/tv clients regardless of cookies', () => {
+      const argsTrue = (service as any).getYoutubeExtractorArgs(true);
+      expect(argsTrue).toEqual([
         '--extractor-args',
-        'youtube:player_client=tv_samsung,visionos,web,mweb',
+        'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb',
       ]);
-    });
 
-    it('returns mobile clients without webpage skip when hasCookies is false', () => {
-      const args = (service as any).getYoutubeExtractorArgs(false);
-      expect(args).toEqual([
+      const argsFalse = (service as any).getYoutubeExtractorArgs(false);
+      expect(argsFalse).toEqual([
         '--extractor-args',
-        'youtube:player_client=tv_samsung,visionos,android',
+        'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb',
       ]);
     });
   });
@@ -366,9 +364,10 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=tv_samsung,visionos,android',
+          'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb',
+          '--no-js-runtimes',
           '--js-runtimes',
-          'node',
+          `node:${process.execPath}`,
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]),
         {
@@ -432,7 +431,7 @@ describe('MediaService', () => {
         binaryService.ytDlpPath,
         expect.arrayContaining([
           '--extractor-args',
-          'youtube:player_client=tv_samsung,visionos,android',
+          'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb',
         ]),
         expect.anything(),
       );
@@ -526,9 +525,10 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=tv_samsung,visionos,android',
+          'youtube:player_client=tv_samsung,visionos,android_vr,web_embedded,mweb',
+          '--no-js-runtimes',
           '--js-runtimes',
-          'node',
+          `node:${process.execPath}`,
           '--merge-output-format',
           'mp4',
         ]),
