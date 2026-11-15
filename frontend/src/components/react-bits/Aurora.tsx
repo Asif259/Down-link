@@ -77,9 +77,13 @@ export default function Aurora({
   }, [colorStops, speed, amplitude]);
 
   return (
-    <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+    <div
+      style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+    >
       <canvas
         ref={canvasRef}
+        style={{ width: '100%', height: '100%', display: 'block' }}
         className="w-full h-full opacity-90 blur-3xl saturate-150 transition-all duration-1000"
       />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_20%,#030712_85%)]" />
