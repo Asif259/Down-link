@@ -13,6 +13,16 @@ describe('MediaService', () => {
   let concurrencyService: ConcurrencyService;
 
   beforeEach(() => {
+    delete process.env.COOKIES_BASE64;
+    const cookiesDir = path.join(process.cwd(), 'cookies');
+    const globalCookie = path.join(cookiesDir, 'cookies.txt');
+    if (fs.existsSync(globalCookie)) {
+      try { fs.unlinkSync(globalCookie); } catch {}
+    }
+    const ytCookie = path.join(cookiesDir, 'youtube.txt');
+    if (fs.existsSync(ytCookie)) {
+      try { fs.unlinkSync(ytCookie); } catch {}
+    }
     binaryService = new BinaryService();
     concurrencyService = new ConcurrencyService();
     service = new MediaService(binaryService, concurrencyService);
@@ -20,6 +30,16 @@ describe('MediaService', () => {
 
   afterEach(() => {
     service.onModuleDestroy();
+    delete process.env.COOKIES_BASE64;
+    const cookiesDir = path.join(process.cwd(), 'cookies');
+    const globalCookie = path.join(cookiesDir, 'cookies.txt');
+    if (fs.existsSync(globalCookie)) {
+      try { fs.unlinkSync(globalCookie); } catch {}
+    }
+    const ytCookie = path.join(cookiesDir, 'youtube.txt');
+    if (fs.existsSync(ytCookie)) {
+      try { fs.unlinkSync(ytCookie); } catch {}
+    }
   });
 
   it('should normalize progressive formats into direct stream tokens', () => {
@@ -135,7 +155,11 @@ describe('MediaService', () => {
 
     // Cleanup
     fs.unlinkSync(targetFile);
-    process.env.COOKIES_BASE64 = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.COOKIES_BASE64;
+    } else {
+      process.env.COOKIES_BASE64 = originalEnv;
+    }
   });
 
   describe('formatYtDlpError', () => {
@@ -169,8 +193,23 @@ describe('MediaService', () => {
     });
   });
 
+  describe('getYoutubeExtractorArgs', () => {
+    it('returns web, mweb, and tv client when hasCookies is true', () => {
+      const args = (service as any).getYoutubeExtractorArgs(true);
+      expect(args).toEqual(['--extractor-args', 'youtube:player_client=web,mweb,tv']);
+    });
+
+    it('returns android_vr, tv, ios and skips webpage/configs when hasCookies is false', () => {
+      const args = (service as any).getYoutubeExtractorArgs(false);
+      expect(args).toEqual([
+        '--extractor-args',
+        'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+      ]);
+    });
+  });
+
   describe('extractMetadata & prepareMergedFile spawn options', () => {
-    it('spawns yt-dlp with cache-dir, anti-bot extractor-args for youtube, and spawnEnv', async () => {
+    it('spawns yt-dlp with cache-dir, anti-bot extractor-args for youtube, and spawnEnv without cookies', async () => {
       const mockChild = new EventEmitter() as any;
       mockChild.stdout = new EventEmitter();
       mockChild.stderr = new EventEmitter();
@@ -188,7 +227,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=ios,mweb,web',
+          'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
           'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         ]),
         {
@@ -211,6 +250,47 @@ describe('MediaService', () => {
       expect(result.title).toBe('Rick Astley');
       expect(result.platform).toBe('youtube');
 
+      spawnSpy.mockRestore();
+    });
+
+    it('spawns yt-dlp with web/tv player client when cookies exist', async () => {
+      const mockChild = new EventEmitter() as any;
+      mockChild.stdout = new EventEmitter();
+      mockChild.stderr = new EventEmitter();
+
+      const cookiesDir = (service as any).cookiesDir;
+      const masterCookie = path.join(cookiesDir, 'cookies.txt');
+      fs.writeFileSync(masterCookie, '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 1999999999 SID test');
+
+      const spawnSpy = jest.spyOn(childProcess, 'spawn').mockReturnValue(mockChild);
+
+      const extractPromise = service.extractMetadata('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      expect(spawnSpy).toHaveBeenCalledWith(
+        binaryService.ytDlpPath,
+        expect.arrayContaining([
+          '--extractor-args',
+          'youtube:player_client=web,mweb,tv',
+          '--cookies',
+        ]),
+        expect.anything(),
+      );
+
+      const dummyMetadata = {
+        title: 'Rick Astley',
+        duration: 213,
+        uploader: 'RickAstleyVEVO',
+        formats: [],
+      };
+
+      mockChild.stdout.emit('data', Buffer.from(JSON.stringify(dummyMetadata)));
+      mockChild.emit('close', 0);
+
+      await extractPromise;
+
+      if (fs.existsSync(masterCookie)) {
+        fs.unlinkSync(masterCookie);
+      }
       spawnSpy.mockRestore();
     });
 
@@ -255,7 +335,7 @@ describe('MediaService', () => {
           '--no-check-certificates',
           '--geo-bypass',
           '--extractor-args',
-          'youtube:player_client=ios,mweb,web',
+          'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
           '--merge-output-format',
           'mp4',
         ]),

@@ -399,9 +399,9 @@ export default function MediaDownloader() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="font-display lowercase text-3xl sm:text-5xl md:text-6xl tracking-[var(--tracking-display)] text-[var(--color-ink)] font-normal leading-[1.08]"
+            className="font-display text-3xl sm:text-5xl md:text-6xl tracking-[var(--tracking-display)] text-[var(--color-ink)] font-normal leading-[1.08] mx-auto"
           >
-            download media from any platform in seconds<span className="text-[var(--color-accent-2)]">.</span>
+            Download media from any platform in seconds<span className="text-[var(--color-accent-2)]">.</span>
           </motion.h1>
 
           <p className="text-sm sm:text-base text-[var(--color-muted)] max-w-xl mx-auto leading-relaxed">

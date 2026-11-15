@@ -91,7 +91,11 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Hydrate cookies/cookies.txt from Hostinger environment variable if provided
-    if (process.env.COOKIES_BASE64) {
+    if (
+      process.env.COOKIES_BASE64 &&
+      process.env.COOKIES_BASE64.trim() &&
+      process.env.COOKIES_BASE64 !== 'undefined'
+    ) {
       try {
         const decoded = Buffer.from(process.env.COOKIES_BASE64, 'base64').toString('utf-8');
         const targetPath = path.join(this.cookiesDir, 'cookies.txt');
@@ -234,6 +238,19 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     return 'Could not fetch media details. The post may be private or removed.';
   }
 
+  private getYoutubeExtractorArgs(hasCookies: boolean): string[] {
+    if (hasCookies) {
+      return [
+        '--extractor-args',
+        'youtube:player_client=web,mweb,tv',
+      ];
+    }
+    return [
+      '--extractor-args',
+      'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+    ];
+  }
+
   async extractMetadata(url: string): Promise<MediaInfoResponse> {
     const platform = detectPlatform(url);
     if (platform === 'unknown') {
@@ -258,7 +275,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           ];
 
           if (platform === 'youtube') {
-            args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+            args.push(...this.getYoutubeExtractorArgs(Boolean(tempCookie)));
           }
 
           if (tempCookie) {
@@ -460,7 +477,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
           ];
 
           if (platform === 'youtube') {
-            args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+            args.push(...this.getYoutubeExtractorArgs(Boolean(tempCookie)));
           }
 
           if (tempCookie) {

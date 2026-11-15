@@ -52,7 +52,9 @@ let MediaService = MediaService_1 = class MediaService {
         if (!fs.existsSync(this.cookiesDir)) {
             fs.mkdirSync(this.cookiesDir, { recursive: true });
         }
-        if (process.env.COOKIES_BASE64) {
+        if (process.env.COOKIES_BASE64 &&
+            process.env.COOKIES_BASE64.trim() &&
+            process.env.COOKIES_BASE64 !== 'undefined') {
             try {
                 const decoded = Buffer.from(process.env.COOKIES_BASE64, 'base64').toString('utf-8');
                 const targetPath = path.join(this.cookiesDir, 'cookies.txt');
@@ -181,6 +183,18 @@ let MediaService = MediaService_1 = class MediaService {
         }
         return 'Could not fetch media details. The post may be private or removed.';
     }
+    getYoutubeExtractorArgs(hasCookies) {
+        if (hasCookies) {
+            return [
+                '--extractor-args',
+                'youtube:player_client=web,mweb,tv',
+            ];
+        }
+        return [
+            '--extractor-args',
+            'youtube:player_client=android_vr,tv,ios;player_skip=webpage,configs',
+        ];
+    }
     async extractMetadata(url) {
         const platform = (0, platform_util_1.detectPlatform)(url);
         if (platform === 'unknown') {
@@ -199,7 +213,7 @@ let MediaService = MediaService_1 = class MediaService {
                 '--geo-bypass',
             ];
             if (platform === 'youtube') {
-                args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+                args.push(...this.getYoutubeExtractorArgs(Boolean(tempCookie)));
             }
             if (tempCookie) {
                 args.push('--cookies', tempCookie);
@@ -361,7 +375,7 @@ let MediaService = MediaService_1 = class MediaService {
                 outputTemplate,
             ];
             if (platform === 'youtube') {
-                args.push('--extractor-args', 'youtube:player_client=ios,mweb,web');
+                args.push(...this.getYoutubeExtractorArgs(Boolean(tempCookie)));
             }
             if (tempCookie) {
                 args.push('--cookies', tempCookie);

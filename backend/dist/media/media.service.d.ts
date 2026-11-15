@@ -52,6 +52,7 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     private emitProgress;
     private sanitizeFilename;
     private formatYtDlpError;
+    private getYoutubeExtractorArgs;
     extractMetadata(url: string): Promise<MediaInfoResponse>;
     private normalizeFormats;
     prepareMergedFile(url: string, formatId: string, type: 'video' | 'audio', jobId?: string, abortSignal?: AbortSignal): Promise<{
