@@ -1,18 +1,26 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
+  ArrowDownToLine,
   CheckCircle2,
   ClipboardPaste,
-  Download,
   Film,
   Loader2,
   Music,
   Sparkles,
+  Tv,
   X,
   Zap,
 } from 'lucide-react';
+import Aurora from './react-bits/Aurora';
+import BlurText from './react-bits/BlurText';
+import Magnet from './react-bits/Magnet';
+import ShinyText from './react-bits/ShinyText';
+import SpotlightCard from './react-bits/SpotlightCard';
+import StarBorder from './react-bits/StarBorder';
 import DownloadHistory from './DownloadHistory';
 import {
   API_BASE_URL,
@@ -30,34 +38,56 @@ import {
   SupportedPlatform,
 } from '../lib/media';
 
-const PLATFORM_STYLES: Record<
+const PLATFORM_THEMES: Record<
   SupportedPlatform,
-  { name: string; badge: string; ring: string }
+  {
+    name: string;
+    accentHex: string;
+    spotlightRgba: string;
+    auroraStops: [string, string, string];
+    pillClasses: string;
+    buttonClasses: string;
+  }
 > = {
   youtube: {
-    name: 'YouTube',
-    badge: 'bg-red-500/15 text-red-400 border-red-500/30',
-    ring: 'focus-within:border-red-500/60',
+    name: 'YouTube Engine',
+    accentHex: '#ef4444',
+    spotlightRgba: 'rgba(239, 68, 68, 0.22)',
+    auroraStops: ['#ef4444', '#f97316', '#dc2626'],
+    pillClasses: 'bg-red-500/10 text-red-400 border-red-500/30',
+    buttonClasses: 'from-red-600 to-orange-600 shadow-red-600/25',
   },
   facebook: {
-    name: 'Facebook',
-    badge: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    ring: 'focus-within:border-blue-500/60',
+    name: 'Facebook Engine',
+    accentHex: '#3b82f6',
+    spotlightRgba: 'rgba(59, 130, 246, 0.22)',
+    auroraStops: ['#2563eb', '#38bdf8', '#4f46e5'],
+    pillClasses: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+    buttonClasses: 'from-blue-600 to-indigo-600 shadow-blue-600/25',
   },
   instagram: {
-    name: 'Instagram',
-    badge: 'bg-pink-500/15 text-pink-400 border-pink-500/30',
-    ring: 'focus-within:border-pink-500/60',
+    name: 'Instagram Engine',
+    accentHex: '#ec4899',
+    spotlightRgba: 'rgba(236, 72, 153, 0.22)',
+    auroraStops: ['#ec4899', '#8b5cf6', '#f59e0b'],
+    pillClasses: 'bg-pink-500/10 text-pink-400 border-pink-500/30',
+    buttonClasses: 'from-pink-600 via-purple-600 to-orange-500 shadow-pink-600/25',
   },
   tiktok: {
-    name: 'TikTok',
-    badge: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-    ring: 'focus-within:border-cyan-500/60',
+    name: 'TikTok Engine',
+    accentHex: '#06b6d4',
+    spotlightRgba: 'rgba(6, 182, 212, 0.22)',
+    auroraStops: ['#06b6d4', '#f43f5e', '#10b981'],
+    pillClasses: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
+    buttonClasses: 'from-cyan-500 to-emerald-500 shadow-cyan-500/25',
   },
   unknown: {
-    name: 'Auto-Detect',
-    badge: 'bg-slate-800 text-slate-400 border-slate-700',
-    ring: 'focus-within:border-emerald-500/60',
+    name: 'Universal Extractor',
+    accentHex: '#10b981',
+    spotlightRgba: 'rgba(16, 185, 129, 0.18)',
+    auroraStops: ['#10b981', '#06b6d4', '#6366f1'],
+    pillClasses: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
+    buttonClasses: 'from-emerald-500 to-teal-500 shadow-emerald-500/25',
   },
 };
 
@@ -68,23 +98,21 @@ export default function MediaDownloader() {
   const [error, setError] = useState<string | null>(null);
   const [media, setMedia] = useState<MediaInfoResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'video' | 'audio'>('video');
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // Tracks active FFmpeg merge / MP3 conversion job
   const [activeFormatId, setActiveFormatId] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Load saved history on client mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistory(loadHistory());
-  }, []);
-
-  useEffect(() => {
     return () => {
       eventSourceRef.current?.close();
     };
   }, []);
+
+  const theme = PLATFORM_THEMES[media?.platform || detectedPlatform];
 
   const handleUrlChange = (value: string) => {
     setUrl(value);
@@ -100,7 +128,7 @@ export default function MediaDownloader() {
     setDetectedPlatform(platform);
 
     if (platform === 'unknown') {
-      setError('Please enter a valid YouTube, Facebook, Instagram, or TikTok link.');
+      setError('Paste a valid YouTube, Facebook, Instagram, or TikTok URL.');
       return;
     }
 
@@ -124,6 +152,9 @@ export default function MediaDownloader() {
       }
 
       setMedia(data);
+      const hasVideo = data.formats.some((f: CleanFormat) => f.type === 'video');
+      setActiveTab(hasVideo ? 'video' : 'audio');
+
       const updatedHistory = saveHistoryItem({
         url: cleanUrl,
         platform: data.platform,
@@ -133,9 +164,6 @@ export default function MediaDownloader() {
         uploader: data.uploader,
       });
       setHistory(updatedHistory);
-
-      const hasVideo = data.formats.some((f: CleanFormat) => f.type === 'video');
-      setActiveTab(hasVideo ? 'video' : 'audio');
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Something went wrong while fetching media.';
@@ -161,7 +189,7 @@ export default function MediaDownloader() {
         fetchMediaInfo(text);
       }
     } catch {
-      setError('Clipboard access blocked by browser. Paste your link directly into the box.');
+      setError('Clipboard permission blocked. Press Cmd+V or Ctrl+V inside the input box.');
     }
   };
 
@@ -188,14 +216,13 @@ export default function MediaDownloader() {
     });
     setHistory(updatedHistory);
 
-    // Path 1: Progressive Stream Proxy (Zero Disk / Instant Start)
     if (!format.needsMerge && format.streamToken) {
       triggerBrowserDownload(`${API_BASE_URL}/api/media/stream/${format.streamToken}`);
       return;
     }
 
-    // Path 2: FFmpeg DASH Merge or MP3 Extraction with Live SSE Progress
     eventSourceRef.current?.close();
+    // eslint-disable-next-line react-hooks/purity
     const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
     setActiveFormatId(format.formatId);
@@ -219,7 +246,7 @@ export default function MediaDownloader() {
           }, 2500);
         }
       } catch {
-        // Ignore malformed heartbeat chunks
+        // Ignore heartbeat noise
       }
     };
 
@@ -234,279 +261,375 @@ export default function MediaDownloader() {
       jobId,
     });
 
-    // Slight delay ensures SSE listener registers on backend before merge starts
     setTimeout(() => {
       triggerBrowserDownload(`${API_BASE_URL}/api/media/download?${params.toString()}`);
     }, 150);
   };
 
-  const platformMeta = PLATFORM_STYLES[detectedPlatform];
   const filteredFormats =
     media?.formats.filter((format) => format.type === activeTab) || [];
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* URL Input Card */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-3">
-          <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${platformMeta.badge}`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {platformMeta.name}
-          </span>
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#030712] text-zinc-100 selection:bg-emerald-500/30 selection:text-emerald-200">
+      <Aurora colorStops={theme.auroraStops} speed={0.7} amplitude={1.2} />
 
-          <button
-            type="button"
-            onClick={handleClipboardButton}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
-          >
-            <ClipboardPaste className="w-3.5 h-3.5" />
-            Paste Link
-          </button>
-        </div>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#ffffff06_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            fetchMediaInfo(url);
-          }}
-          className={`flex flex-col sm:flex-row gap-3 bg-slate-950 border border-slate-800 rounded-xl p-2 transition-colors ${platformMeta.ring}`}
-        >
-          <div className="relative flex-1 flex items-center">
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => handleUrlChange(e.target.value)}
-              onPaste={handlePaste}
-              placeholder="Paste YouTube, Facebook, Instagram, or TikTok URL..."
-              className="w-full bg-transparent px-3 py-2.5 text-sm sm:text-base text-slate-100 placeholder-slate-500 focus:outline-none pr-8"
-              required
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-24 space-y-10">
+        <header className="text-center space-y-5 max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md shadow-inner"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <ShinyText
+              text="Zero-Watermark • Instant CDN Stream • 1080p HD Muxer"
+              className="text-xs font-medium tracking-wide"
             />
-            {url && (
-              <button
-                type="button"
-                onClick={() => {
-                  setUrl('');
-                  setDetectedPlatform('unknown');
-                  setMedia(null);
-                  setError(null);
-                }}
-                aria-label="Clear URL"
-                className="absolute right-2 text-slate-500 hover:text-slate-300"
+          </motion.div>
+
+          <BlurText
+            text="Download Media From Any Platform in Seconds."
+            className="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-[1.12]"
+          />
+
+          <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
+            Paste a link from{' '}
+            <span className="text-zinc-200 font-medium">YouTube</span>,{' '}
+            <span className="text-zinc-200 font-medium">Facebook</span>,{' '}
+            <span className="text-zinc-200 font-medium">Instagram</span>, or{' '}
+            <span className="text-zinc-200 font-medium">TikTok</span>. Automatically detects
+            streams and delivers crisp MP4 video or studio-grade MP3 audio.
+          </p>
+        </header>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-300 ${theme.pillClasses}`}
               >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !url.trim()}
-            className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-medium text-sm px-6 py-3 rounded-lg transition-colors cursor-pointer"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Get Media
-              </>
-            )}
-          </button>
-        </form>
-
-        {error && (
-          <div className="mt-4 flex items-start gap-2.5 bg-red-950/50 border border-red-500/30 text-red-300 text-sm rounded-xl p-3.5">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
-            <span>{error}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Skeleton Loader */}
-      {loading && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 animate-pulse space-y-5">
-          <div className="flex flex-col sm:flex-row gap-5">
-            <div className="w-full sm:w-52 h-32 bg-slate-800 rounded-xl shrink-0" />
-            <div className="flex-1 space-y-3 py-1">
-              <div className="h-5 bg-slate-800 rounded w-3/4" />
-              <div className="h-4 bg-slate-800 rounded w-1/3" />
-              <div className="h-8 bg-slate-800 rounded w-44 mt-4" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <div className="h-14 bg-slate-800 rounded-xl" />
-            <div className="h-14 bg-slate-800 rounded-xl" />
-          </div>
-        </div>
-      )}
-
-      {/* Extracted Media Result & Format Picker */}
-      {media && !loading && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-          {/* Preview Header */}
-          <div className="p-5 sm:p-6 border-b border-slate-800 flex flex-col sm:flex-row gap-5">
-            <div className="relative w-full sm:w-56 aspect-video bg-slate-950 rounded-xl overflow-hidden shrink-0 border border-slate-800">
-              {media.thumbnail ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={media.thumbnail}
-                  alt={media.title}
-                  className="w-full h-full object-cover"
+                <span
+                  className="w-2 h-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: theme.accentHex }}
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-600">
-                  <Film className="w-8 h-8" />
-                </div>
-              )}
-              {media.duration > 0 && (
-                <span className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-2 py-0.5 rounded">
-                  {formatDuration(media.duration)}
-                </span>
-              )}
+                {theme.name}
+              </span>
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                      PLATFORM_STYLES[media.platform].badge
-                    }`}
+            <button
+              type="button"
+              onClick={handleClipboardButton}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+            >
+              <ClipboardPaste className="w-3.5 h-3.5 text-emerald-400" />
+              Paste from Clipboard
+            </button>
+          </div>
+
+          <StarBorder color={theme.accentHex}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchMediaInfo(url);
+              }}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5"
+            >
+              <div className="relative flex-1 flex items-center">
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  onPaste={handlePaste}
+                  placeholder="https://www.youtube.com/watch?v=... or TikTok / Reel link"
+                  className="w-full bg-transparent pl-4 pr-10 py-3.5 text-sm sm:text-base text-white placeholder-zinc-500 focus:outline-none"
+                  required
+                />
+                {url && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUrl('');
+                      setDetectedPlatform('unknown');
+                      setMedia(null);
+                      setError(null);
+                    }}
+                    aria-label="Clear URL"
+                    className="absolute right-3 p-1 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
                   >
-                    {PLATFORM_STYLES[media.platform].name}
-                  </span>
-                  <span className="text-xs text-slate-400 truncate">
-                    {media.uploader}
-                  </span>
-                </div>
-                <h2 className="text-base sm:text-lg font-semibold text-slate-100 line-clamp-2">
-                  {media.title}
-                </h2>
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
-              {/* Video / Audio Mode Switcher */}
-              <div className="inline-flex bg-slate-950 p-1 rounded-xl border border-slate-800 w-fit mt-4">
+              <Magnet strength={0.18} disabled={loading || !url.trim()}>
                 <button
-                  type="button"
-                  onClick={() => setActiveTab('video')}
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    activeTab === 'video'
-                      ? 'bg-emerald-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  type="submit"
+                  disabled={loading || !url.trim()}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r ${theme.buttonClasses} hover:brightness-110 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:shadow-none text-white font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg transition-all cursor-pointer`}
                 >
-                  <Film className="w-3.5 h-3.5" />
-                  Video (MP4)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('audio')}
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    activeTab === 'audio'
-                      ? 'bg-emerald-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Music className="w-3.5 h-3.5" />
-                  Audio (MP3)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Live FFmpeg / MP3 Progress Bar */}
-          {jobProgress && activeFormatId && (
-            <div className="px-6 py-4 bg-slate-950/80 border-b border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-medium flex items-center gap-2">
-                  {jobProgress.status === 'ready' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                  )}
-                  {jobProgress.status === 'starting' && 'Preparing stream...'}
-                  {jobProgress.status === 'downloading' && 'Fetching high-definition tracks...'}
-                  {jobProgress.status === 'merging' && 'Merging video and audio with FFmpeg...'}
-                  {jobProgress.status === 'ready' && 'Download started!'}
-                </span>
-                <span className="font-mono text-emerald-400">{jobProgress.percent}%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-300"
-                  style={{ width: `${jobProgress.percent}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Download Options Grid */}
-          <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filteredFormats.map((format) => {
-              const sizeText = formatBytes(format.filesizeApprox);
-              const isProcessing = activeFormatId === format.formatId;
-
-              return (
-                <button
-                  key={format.formatId}
-                  type="button"
-                  disabled={Boolean(activeFormatId)}
-                  onClick={() => handleDownloadClick(format)}
-                  className="group flex items-center justify-between p-4 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-emerald-500/50 disabled:opacity-60 transition-all text-left cursor-pointer"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-100">
-                        {format.label}
-                      </span>
-                      {!format.needsMerge && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
-                          <Zap className="w-3 h-3" />
-                          Instant
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      {format.ext.toUpperCase()}
-                      {sizeText ? ` • ~${sizeText}` : ''}
-                      {format.needsMerge ? ' • Server HD Merge' : ' • Direct Stream'}
-                    </p>
-                  </div>
-
-                  <div className="w-9 h-9 rounded-lg bg-slate-900 group-hover:bg-emerald-600 flex items-center justify-center text-slate-300 group-hover:text-white transition-colors shrink-0">
-                    {isProcessing ? (
+                  {loading ? (
+                    <>
                       <Loader2 className="w-4 h-4 animate-spin" />
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownToLine className="w-4 h-4" />
+                      Extract Media
+                    </>
+                  )}
+                </button>
+              </Magnet>
+            </form>
+          </StarBorder>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 backdrop-blur-md text-red-200 text-sm rounded-xl px-4 py-3.5"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+
+        {loading && (
+          <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-6 space-y-6 animate-pulse">
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="w-full sm:w-64 aspect-video bg-white/5 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-4 py-1">
+                <div className="h-4 bg-white/10 rounded-full w-28" />
+                <div className="h-6 bg-white/10 rounded-lg w-4/5" />
+                <div className="h-4 bg-white/5 rounded-lg w-1/3" />
+                <div className="h-10 bg-white/10 rounded-xl w-56 mt-4" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="h-20 bg-white/5 rounded-xl" />
+              <div className="h-20 bg-white/5 rounded-xl" />
+              <div className="h-20 bg-white/5 rounded-xl" />
+              <div className="h-20 bg-white/5 rounded-xl" />
+            </div>
+          </SpotlightCard>
+        )}
+
+        <AnimatePresence mode="wait">
+          {media && !loading && (
+            <motion.div
+              key={media.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-5"
+            >
+              <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-5 sm:p-6">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  <div className="relative w-full md:w-64 aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 shrink-0 group shadow-2xl">
+                    {media.thumbnail ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={media.thumbnail}
+                        alt={media.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     ) : (
-                      <Download className="w-4 h-4" />
+                      <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                        <Tv className="w-10 h-10" />
+                      </div>
+                    )}
+                    {media.duration > 0 && (
+                      <span className="absolute bottom-2.5 right-2.5 bg-black/80 backdrop-blur-md text-white text-xs font-mono px-2.5 py-0.5 rounded-md border border-white/10">
+                        {formatDuration(media.duration)}
+                      </span>
                     )}
                   </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      <DownloadHistory
-        items={history}
-        activeUrl={url}
-        isLoading={loading}
-        onSelect={(selectedUrl) => {
-          handleUrlChange(selectedUrl);
-          fetchMediaInfo(selectedUrl);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onRemove={(id) => setHistory(removeHistoryItem(id))}
-        onClearAll={() => {
-          clearAllHistory();
-          setHistory([]);
-        }}
-      />
+                  <div className="flex-1 min-w-0 flex flex-col justify-between space-y-4 w-full">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${theme.pillClasses}`}
+                        >
+                          {PLATFORM_THEMES[media.platform].name.replace(' Engine', '')}
+                        </span>
+                        <span className="text-xs text-zinc-400 font-medium truncate">
+                          by {media.uploader}
+                        </span>
+                      </div>
+
+                      <h2 className="text-lg sm:text-xl font-bold text-white line-clamp-2 leading-snug">
+                        {media.title}
+                      </h2>
+                    </div>
+
+                    <div className="inline-flex p-1 rounded-xl bg-zinc-950/90 border border-white/10 w-fit">
+                      {(['video', 'audio'] as const).map((tab) => {
+                        const isActive = activeTab === tab;
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setActiveTab(tab)}
+                            className={`relative inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                              isActive ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+                            }`}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeMediaTab"
+                                transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
+                                className={`absolute inset-0 rounded-lg bg-gradient-to-r ${theme.buttonClasses}`}
+                              />
+                            )}
+                            <span className="relative z-10 inline-flex items-center gap-2">
+                              {tab === 'video' ? (
+                                <>
+                                  <Film className="w-3.5 h-3.5" />
+                                  Video Formats (MP4)
+                                </>
+                              ) : (
+                                <>
+                                  <Music className="w-3.5 h-3.5" />
+                                  Audio Extraction (MP3)
+                                </>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {jobProgress && activeFormatId && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-6 pt-5 border-t border-white/10 space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-200 font-medium flex items-center gap-2">
+                          {jobProgress.status === 'ready' ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                          )}
+                          {jobProgress.status === 'starting' && 'Initializing extraction pipeline...'}
+                          {jobProgress.status === 'downloading' &&
+                            'Downloading high-bitrate stream tracks...'}
+                          {jobProgress.status === 'merging' &&
+                            'Muxing video & audio with FFmpeg...'}
+                          {jobProgress.status === 'ready' && 'Stream complete — saving file!'}
+                        </span>
+                        <span className="font-mono font-semibold text-emerald-400">
+                          {jobProgress.percent}%
+                        </span>
+                      </div>
+
+                      <div className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-white/10 p-0.5">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${jobProgress.percent}%` }}
+                          transition={{ ease: 'easeOut', duration: 0.3 }}
+                          className={`h-full rounded-full bg-gradient-to-r ${theme.buttonClasses}`}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </SpotlightCard>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {filteredFormats.map((format, idx) => {
+                  const sizeText = formatBytes(format.filesizeApprox);
+                  const isProcessing = activeFormatId === format.formatId;
+
+                  return (
+                    <motion.div
+                      key={format.formatId}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <SpotlightCard
+                        spotlightColor={theme.spotlightRgba}
+                        onClick={() => !activeFormatId && handleDownloadClick(format)}
+                        className={`p-4 cursor-pointer group ${
+                          activeFormatId && !isProcessing ? 'opacity-50 pointer-events-none' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm sm:text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
+                                {format.label}
+                              </span>
+                              {!format.needsMerge ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                  <Zap className="w-3 h-3" />
+                                  Instant
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-zinc-300 border border-white/10">
+                                  HD Mux
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs text-zinc-400">
+                              {format.ext.toUpperCase()}
+                              {sizeText ? ` • ~${sizeText}` : ''}
+                              {format.needsMerge
+                                ? ' • FFmpeg Studio Merge'
+                                : ' • Direct Zero-Disk Stream'}
+                            </p>
+                          </div>
+
+                          <div
+                            className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 group-hover:border-transparent group-hover:bg-gradient-to-br ${theme.buttonClasses} flex items-center justify-center text-zinc-300 group-hover:text-white transition-all duration-300 shrink-0 shadow-inner`}
+                          >
+                            {isProcessing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <ArrowDownToLine className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                            )}
+                          </div>
+                        </div>
+                      </SpotlightCard>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <DownloadHistory
+          items={history}
+          activeUrl={url}
+          isLoading={loading}
+          onSelect={(selectedUrl) => {
+            handleUrlChange(selectedUrl);
+            fetchMediaInfo(selectedUrl);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onRemove={(id) => setHistory(removeHistoryItem(id))}
+          onClearAll={() => {
+            clearAllHistory();
+            setHistory([]);
+          }}
+        />
+      </div>
     </div>
   );
 }
