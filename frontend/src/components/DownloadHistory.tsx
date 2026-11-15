@@ -147,7 +147,7 @@ function DownloadHistory({
                       disabled={isLoading}
                       onClick={() => onSelect(item.url)}
                       aria-label={`Reload ${item.lastFormatLabel ? item.lastFormatLabel.split(' ')[0] : 'stream'} for ${item.title}`}
-                      className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-emerald-400 hover:text-emerald-300 active:text-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg px-2 py-1.5 min-h-[34px] hover:bg-emerald-500/10 transition-colors disabled:opacity-50 cursor-pointer truncate"
+                      className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-emerald-400 hover:text-emerald-300 active:text-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg px-2 py-1.5 min-h-[34px] hover:bg-emerald-500/10 transition-colors disabled:opacity-50 cursor-pointer truncate"
                     >
                       <RotateCcw className="w-3 h-3 shrink-0" />
                       <span className="truncate">
@@ -163,7 +163,7 @@ function DownloadHistory({
                       rel="noopener noreferrer"
                       title="Open source link in new tab"
                       aria-label="Open source link in new tab"
-                      className="w-8 h-8 sm:w-7 sm:h-7 shrink-0 flex items-center justify-center text-zinc-400 hover:text-zinc-200 active:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors"
+                      className="w-8 h-8 sm:w-7 sm:h-7 shrink-0 flex items-center justify-center text-zinc-400 hover:text-zinc-200 active:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
@@ -174,7 +174,7 @@ function DownloadHistory({
                   type="button"
                   onClick={() => onRemove(item.id)}
                   aria-label={`Remove ${item.title} from history`}
-                  className="absolute top-2 right-2 w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 active:text-white hover:bg-white/10 active:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors cursor-pointer"
+                  className="absolute top-2 right-2 w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 active:text-white hover:bg-white/10 active:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

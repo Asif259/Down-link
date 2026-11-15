@@ -622,7 +622,7 @@ export default function MediaDownloader() {
                             role="tab"
                             aria-selected={isActive}
                             onClick={() => setActiveTab(tab)}
-                            className={`relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] rounded-lg text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer ${
+                            className={`relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] rounded-lg text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors cursor-pointer ${
                               isActive ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
                             }`}
                           >
@@ -682,7 +682,14 @@ export default function MediaDownloader() {
                         </span>
                       </div>
 
-                      <div className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-white/10 p-0.5">
+                      <div
+                        role="progressbar"
+                        aria-valuenow={jobProgress.percent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label="Media conversion progress"
+                        className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-white/10 p-0.5"
+                      >
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${jobProgress.percent}%` }}
@@ -714,8 +721,12 @@ export default function MediaDownloader() {
                         spotlightColor={theme.spotlightRgba}
                         onClick={() => !activeFormatId && handleDownloadClick(format)}
                         aria-label={`Download ${format.label} ${format.ext.toUpperCase()}${sizeText ? `, approx ${sizeText}` : ''}`}
-                        className={`w-full p-3.5 sm:p-4 min-h-[72px] cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none transition-transform ${
-                          activeFormatId && !isProcessing ? 'opacity-50 pointer-events-none' : ''
+                        className={`w-full p-3.5 sm:p-4 min-h-[72px] cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none transition-all ${
+                          isProcessing
+                            ? 'ring-2 ring-emerald-400 border-emerald-400/50 shadow-lg shadow-emerald-500/15'
+                            : activeFormatId
+                            ? 'opacity-50 pointer-events-none'
+                            : ''
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3 sm:gap-4">
@@ -772,6 +783,16 @@ export default function MediaDownloader() {
           onRemove={handleRemoveHistory}
           onClearAll={handleClearAllHistory}
         />
+
+        <footer className="pt-6 sm:pt-10 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+          <div className="flex items-center gap-2 text-zinc-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span>Down-link Stream Engine</span>
+          </div>
+          <p className="text-zinc-500 text-center sm:text-right">
+            Zero-watermark CDN streaming • No logs • High fidelity MP4 & MP3
+          </p>
+        </footer>
       </div>
     </div>
   );
