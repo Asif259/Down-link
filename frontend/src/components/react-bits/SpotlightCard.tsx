@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 
 interface SpotlightCardProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
@@ -21,13 +21,35 @@ export default function SpotlightCard({
   ...props
 }: SpotlightCardProps) {
   const containerRef = useRef<HTMLDivElement | HTMLButtonElement | null>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
+  const rectRef = useRef<DOMRect | null>(null);
+
+  const handleMouseEnter = () => {
+    if (containerRef.current) {
+      rectRef.current = containerRef.current.getBoundingClientRect();
+    }
+    if (spotlightRef.current) {
+      spotlightRef.current.style.opacity = '1';
+    }
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    if (!spotlightRef.current) return;
+    if (!rectRef.current && containerRef.current) {
+      rectRef.current = containerRef.current.getBoundingClientRect();
+    }
+    const rect = rectRef.current;
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    spotlightRef.current.style.background = `radial-gradient(380px circle at ${x}px ${y}px, ${spotlightColor}, transparent 70%)`;
+  };
+
+  const handleMouseLeave = () => {
+    rectRef.current = null;
+    if (spotlightRef.current) {
+      spotlightRef.current.style.opacity = '0';
+    }
   };
 
   const Component = as as React.ElementType;
@@ -38,17 +60,14 @@ export default function SpotlightCard({
       type={as === 'button' ? type : undefined}
       disabled={as === 'button' ? disabled : undefined}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setOpacity(1)}
-      onMouseLeave={() => setOpacity(0)}
-      className={`relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 text-left ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 text-left [contain:paint] ${className}`}
       {...props}
     >
       <div
-        className="pointer-events-none absolute -inset-px transition-opacity duration-500"
-        style={{
-          opacity,
-          background: `radial-gradient(380px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 70%)`,
-        }}
+        ref={spotlightRef}
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300"
       />
       <div className="relative z-10 w-full">{children}</div>
     </Component>

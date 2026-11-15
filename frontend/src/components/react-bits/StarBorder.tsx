@@ -22,7 +22,7 @@ export default function StarBorder({
         }}
       />
       <div
-        className="pointer-events-none absolute -inset-[100%] animate-[spin_6s_linear_infinite] motion-reduce:animate-none opacity-40 group-focus-within:opacity-90 transition-opacity"
+        className="pointer-events-none absolute -inset-[100%] animate-[spin_6s_linear_infinite] motion-reduce:animate-none opacity-40 group-focus-within:opacity-90 transition-opacity transform-gpu will-change-transform"
         style={{
           background: `conic-gradient(from 0deg, transparent 0 300deg, ${color} 360deg)`,
         }}

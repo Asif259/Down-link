@@ -25,27 +25,38 @@ export default function Aurora({
 
     let animationFrameId: number;
     let time = 0;
+    let cachedWidth = 0;
+    let cachedHeight = 0;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = canvas.offsetWidth * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      cachedWidth = canvas.offsetWidth;
+      cachedHeight = canvas.offsetHeight;
+      // Scale canvas slightly to reduce GPU rasterization fill-rate without visual loss under blur-3xl
+      canvas.width = Math.round(cachedWidth * 0.75 * dpr);
+      canvas.height = Math.round(cachedHeight * 0.75 * dpr);
+      ctx.setTransform(dpr * 0.75, 0, 0, dpr * 0.75, 0, 0);
     };
 
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', resize, { passive: true });
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const render = () => {
+      if (document.hidden) {
+        // Halt animation loops when user switches tabs to save 100% of GPU/CPU
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
+
       if (!prefersReducedMotion) {
         time += 0.008 * speed;
       }
-      const width = canvas.offsetWidth;
-      const height = canvas.offsetHeight;
+      const width = cachedWidth;
+      const height = cachedHeight;
 
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = 'screen';

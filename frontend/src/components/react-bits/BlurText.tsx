@@ -9,7 +9,7 @@ interface BlurTextProps {
   className?: string;
 }
 
-export default function BlurText({
+function BlurText({
   text,
   delay = 0.06,
   className = '',
@@ -36,3 +36,5 @@ export default function BlurText({
     </h1>
   );
 }
+
+export default React.memo(BlurText);

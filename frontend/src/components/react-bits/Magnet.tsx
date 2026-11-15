@@ -17,23 +17,46 @@ export default function Magnet({
 }: MagnetProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const rectRef = useRef<DOMRect | null>(null);
+  const rafId = useRef<number | null>(null);
+
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      rectRef.current = ref.current.getBoundingClientRect();
+    }
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled || !ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
+    if (!rectRef.current) {
+      rectRef.current = ref.current.getBoundingClientRect();
+    }
+    const rect = rectRef.current;
+    if (!rect) return;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    setOffset({
-      x: (e.clientX - centerX) * strength,
-      y: (e.clientY - centerY) * strength,
+
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+    rafId.current = requestAnimationFrame(() => {
+      setOffset({
+        x: (e.clientX - centerX) * strength,
+        y: (e.clientY - centerY) * strength,
+      });
     });
+  };
+
+  const handleMouseLeave = () => {
+    rectRef.current = null;
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+    setOffset({ x: 0, y: 0 });
   };
 
   return (
     <div
       ref={ref}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
-      onMouseLeave={() => setOffset({ x: 0, y: 0 })}
+      onMouseLeave={handleMouseLeave}
       style={{
         transform: `translate3d(${offset.x}px, ${offset.y}px, 0)`,
         transition:

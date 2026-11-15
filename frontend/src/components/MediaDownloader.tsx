@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
@@ -152,7 +152,10 @@ export default function MediaDownloader() {
     };
   }, []);
 
-  const theme = PLATFORM_THEMES[media?.platform || detectedPlatform];
+  const theme = useMemo(
+    () => PLATFORM_THEMES[media?.platform || detectedPlatform],
+    [media?.platform, detectedPlatform]
+  );
 
   const handleUrlChange = (value: string) => {
     const cleaned = cleanUrlInput(value);
@@ -315,8 +318,27 @@ export default function MediaDownloader() {
     }, 150);
   };
 
-  const filteredFormats =
-    media?.formats.filter((format) => format.type === activeTab) || [];
+  const filteredFormats = useMemo(
+    () => media?.formats.filter((format) => format.type === activeTab) || [],
+    [media, activeTab]
+  );
+
+  const handleSelectHistory = useCallback((selectedUrl: string) => {
+    const cleaned = cleanUrlInput(selectedUrl);
+    setUrl(cleaned);
+    setDetectedPlatform(detectClientPlatform(cleaned));
+    fetchMediaInfo(cleaned);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleRemoveHistory = useCallback((id: string) => {
+    setHistory(removeHistoryItem(id));
+  }, []);
+
+  const handleClearAllHistory = useCallback(() => {
+    clearAllHistory();
+    setHistory([]);
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#030712] text-zinc-100 selection:bg-emerald-500/30 selection:text-emerald-200">
@@ -746,16 +768,9 @@ export default function MediaDownloader() {
           items={history}
           activeUrl={url}
           isLoading={loading}
-          onSelect={(selectedUrl) => {
-            handleUrlChange(selectedUrl);
-            fetchMediaInfo(selectedUrl);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          onRemove={(id) => setHistory(removeHistoryItem(id))}
-          onClearAll={() => {
-            clearAllHistory();
-            setHistory([]);
-          }}
+          onSelect={handleSelectHistory}
+          onRemove={handleRemoveHistory}
+          onClearAll={handleClearAllHistory}
         />
       </div>
     </div>

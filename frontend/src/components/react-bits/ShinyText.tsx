@@ -9,7 +9,7 @@ interface ShinyTextProps {
   className?: string;
 }
 
-export default function ShinyText({
+function ShinyText({
   text,
   disabled = false,
   speed = 3,
@@ -32,3 +32,5 @@ export default function ShinyText({
     </span>
   );
 }
+
+export default React.memo(ShinyText);

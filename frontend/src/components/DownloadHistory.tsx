@@ -50,7 +50,7 @@ interface DownloadHistoryProps {
   onClearAll: () => void;
 }
 
-export default function DownloadHistory({
+function DownloadHistory({
   items,
   activeUrl,
   isLoading,
@@ -61,7 +61,7 @@ export default function DownloadHistory({
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-4 pt-4" aria-label="Recent Extractions History">
+    <section className="space-y-4 pt-4 [contain:content]" aria-label="Recent Extractions History">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-emerald-400" />
@@ -90,7 +90,7 @@ export default function DownloadHistory({
             <SpotlightCard
               key={item.id}
               spotlightColor={badge.spotlight}
-              className={`p-3 sm:p-3.5 group ${
+              className={`p-3 sm:p-3.5 group [content-visibility:auto] [contain-intrinsic-size:auto_90px] ${
                 isCurrent ? 'border-emerald-500/40 ring-1 ring-emerald-500/30' : ''
               }`}
             >
@@ -186,3 +186,5 @@ export default function DownloadHistory({
     </section>
   );
 }
+
+export default React.memo(DownloadHistory);
