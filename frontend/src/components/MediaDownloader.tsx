@@ -10,15 +10,12 @@ import {
   Film,
   Loader2,
   Music,
-  Sparkles,
   Tv,
   X,
   Zap,
 } from 'lucide-react';
 import Aurora from './react-bits/Aurora';
-import BlurText from './react-bits/BlurText';
 import Magnet from './react-bits/Magnet';
-import ShinyText from './react-bits/ShinyText';
 import SpotlightCard from './react-bits/SpotlightCard';
 import StarBorder from './react-bits/StarBorder';
 import DownloadHistory from './DownloadHistory';
@@ -51,44 +48,44 @@ const PLATFORM_THEMES: Record<
   }
 > = {
   youtube: {
-    name: 'YouTube Engine',
+    name: 'youtube engine',
     accentHex: '#ef4444',
-    spotlightRgba: 'rgba(239, 68, 68, 0.22)',
-    auroraStops: ['#ef4444', '#f97316', '#dc2626'],
-    pillClasses: 'bg-red-500/10 text-red-400 border-red-500/30',
-    buttonClasses: 'from-red-600 to-orange-600 shadow-red-600/25',
+    spotlightRgba: 'rgba(239, 68, 68, 0.16)',
+    auroraStops: ['#5c1a24', '#8f6f30', '#1c1024'],
+    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-rule-2)]',
+    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
   },
   facebook: {
-    name: 'Facebook Engine',
+    name: 'facebook engine',
     accentHex: '#3b82f6',
-    spotlightRgba: 'rgba(59, 130, 246, 0.22)',
-    auroraStops: ['#2563eb', '#38bdf8', '#4f46e5'],
-    pillClasses: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-    buttonClasses: 'from-blue-600 to-indigo-600 shadow-blue-600/25',
+    spotlightRgba: 'rgba(59, 130, 246, 0.16)',
+    auroraStops: ['#1d3b66', '#8f6f30', '#1c1024'],
+    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-ink-2)] border-[var(--color-rule-2)]',
+    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
   },
   instagram: {
-    name: 'Instagram Engine',
+    name: 'instagram engine',
     accentHex: '#ec4899',
-    spotlightRgba: 'rgba(236, 72, 153, 0.22)',
-    auroraStops: ['#ec4899', '#8b5cf6', '#f59e0b'],
-    pillClasses: 'bg-pink-500/10 text-pink-400 border-pink-500/30',
-    buttonClasses: 'from-pink-600 via-purple-600 to-orange-500 shadow-pink-600/25',
+    spotlightRgba: 'rgba(236, 72, 153, 0.16)',
+    auroraStops: ['#661e44', '#8f6f30', '#1c1024'],
+    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-rule-2)]',
+    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
   },
   tiktok: {
-    name: 'TikTok Engine',
+    name: 'tiktok engine',
     accentHex: '#06b6d4',
-    spotlightRgba: 'rgba(6, 182, 212, 0.22)',
-    auroraStops: ['#06b6d4', '#f43f5e', '#10b981'],
-    pillClasses: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
-    buttonClasses: 'from-cyan-500 to-emerald-500 shadow-cyan-500/25',
+    spotlightRgba: 'rgba(6, 182, 212, 0.16)',
+    auroraStops: ['#164a57', '#8f6f30', '#1c1024'],
+    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-rule-2)]',
+    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
   },
   unknown: {
-    name: 'Universal Extractor',
-    accentHex: '#10b981',
-    spotlightRgba: 'rgba(16, 185, 129, 0.18)',
-    auroraStops: ['#10b981', '#06b6d4', '#6366f1'],
-    pillClasses: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
-    buttonClasses: 'from-emerald-500 to-teal-500 shadow-emerald-500/25',
+    name: 'universal extractor',
+    accentHex: '#e2b659',
+    spotlightRgba: 'rgba(226, 182, 89, 0.16)',
+    auroraStops: ['#2e153b', '#8f6f30', '#1c1024'],
+    pillClasses: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-rule-2)]',
+    buttonClasses: 'bg-[var(--color-accent)] text-[var(--color-accent-ink)]',
   },
 };
 
@@ -101,31 +98,31 @@ const PLATFORM_SHOWCASE: Array<{
 }> = [
   {
     platform: 'youtube',
-    label: 'YouTube',
-    tag: '1080p HD & MP3',
+    label: 'youtube',
+    tag: '1080p hd & mp3',
     dotColor: '#ef4444',
-    placeholder: 'https://www.youtube.com/watch?v=...',
+    placeholder: 'https://www.youtube.com/watch?v=…',
   },
   {
     platform: 'tiktok',
-    label: 'TikTok',
-    tag: 'No Watermark',
+    label: 'tiktok',
+    tag: 'no watermark',
     dotColor: '#06b6d4',
-    placeholder: 'https://www.tiktok.com/@user/video/...',
+    placeholder: 'https://www.tiktok.com/@user/video/…',
   },
   {
     platform: 'instagram',
-    label: 'Instagram',
-    tag: 'Reels & Audio',
+    label: 'instagram',
+    tag: 'reels & audio',
     dotColor: '#ec4899',
-    placeholder: 'https://www.instagram.com/reel/...',
+    placeholder: 'https://www.instagram.com/reel/…',
   },
   {
     platform: 'facebook',
-    label: 'Facebook',
-    tag: 'HD Watch',
+    label: 'facebook',
+    tag: 'hd watch',
     dotColor: '#3b82f6',
-    placeholder: 'https://www.facebook.com/watch/?v=...',
+    placeholder: 'https://www.facebook.com/watch/?v=…',
   },
 ];
 
@@ -133,203 +130,253 @@ const DEMO_SAMPLE_URL = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
 
 export default function MediaDownloader() {
   const [url, setUrl] = useState('');
-  const [detectedPlatform, setDetectedPlatform] = useState<SupportedPlatform>('unknown');
+  const [detectedPlatform, setDetectedPlatform] =
+    useState<SupportedPlatform>('unknown');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [media, setMedia] = useState<MediaInfoResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'video' | 'audio'>('video');
   const [history, setHistory] = useState<HistoryItem[]>([]);
-
   const [activeFormatId, setActiveFormatId] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
+
   const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistory(loadHistory());
     return () => {
-      eventSourceRef.current?.close();
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
-  const theme = useMemo(
-    () => PLATFORM_THEMES[media?.platform || detectedPlatform],
-    [media?.platform, detectedPlatform]
-  );
+  const theme = useMemo(() => {
+    const key = media?.platform || detectedPlatform;
+    return PLATFORM_THEMES[key] || PLATFORM_THEMES.unknown;
+  }, [media?.platform, detectedPlatform]);
 
-  const handleUrlChange = (value: string) => {
+  const handleUrlChange = useCallback((value: string) => {
     const cleaned = cleanUrlInput(value);
     setUrl(cleaned);
     setDetectedPlatform(detectClientPlatform(cleaned));
-    if (error) setError(null);
-  };
+    if (!cleaned) {
+      setMedia(null);
+      setError(null);
+    }
+  }, []);
 
-  const fetchMediaInfo = async (targetUrl: string) => {
-    const cleanUrl = cleanUrlInput(targetUrl);
-    if (!cleanUrl) return;
-
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setError('You are currently offline. Check your internet connection and try again.');
+  const fetchMediaInfo = useCallback(async (targetUrl: string) => {
+    const trimmed = targetUrl.trim();
+    if (!trimmed) {
+      setError('Please provide a valid media URL.');
       return;
     }
 
-    const platform = detectClientPlatform(cleanUrl);
-    setDetectedPlatform(platform);
-
-    if (platform === 'unknown') {
-      setError('Paste a valid YouTube, Facebook, Instagram, or TikTok URL.');
-      return;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setLoading(true);
     setError(null);
     setMedia(null);
-    setJobProgress(null);
     setActiveFormatId(null);
-    eventSourceRef.current?.close();
+    setJobProgress(null);
+    isFetchingRef.current = true;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/media/extract`, {
+      const res = await fetch(`${API_BASE_URL}/api/media/extract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: cleanUrl }),
+        body: JSON.stringify({ url: trimmed }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to extract media from this link.');
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to extract media information.');
       }
 
       setMedia(data);
+      setDetectedPlatform(data.platform);
+
       const hasVideo = data.formats.some((f: CleanFormat) => f.type === 'video');
-      setActiveTab(hasVideo ? 'video' : 'audio');
+      const hasAudio = data.formats.some((f: CleanFormat) => f.type === 'audio');
+      if (!hasVideo && hasAudio) {
+        setActiveTab('audio');
+      } else {
+        setActiveTab('video');
+      }
 
       const updatedHistory = saveHistoryItem({
-        url: cleanUrl,
-        platform: data.platform,
+        url: trimmed,
         title: data.title,
         thumbnail: data.thumbnail,
         duration: data.duration,
+        platform: data.platform,
         uploader: data.uploader,
       });
       setHistory(updatedHistory);
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
       const message =
-        err instanceof Error ? err.message : 'Something went wrong while fetching media.';
+        err instanceof Error ? err.message : 'An unexpected error occurred.';
       setError(message);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedText = e.clipboardData.getData('text');
-    if (pastedText) {
-      const cleaned = cleanUrlInput(pastedText);
-      handleUrlChange(cleaned);
-      fetchMediaInfo(cleaned);
-    }
-  };
-
-  const handleClipboardButton = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        const cleaned = cleanUrlInput(text);
-        handleUrlChange(cleaned);
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData('text');
+      const cleaned = cleanUrlInput(pasted);
+      setUrl(cleaned);
+      setDetectedPlatform(detectClientPlatform(cleaned));
+      if (cleaned) {
         fetchMediaInfo(cleaned);
       }
+    },
+    [fetchMediaInfo]
+  );
+
+  const handleClipboardButton = useCallback(async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        setError('Clipboard access not supported in this browser.');
+        return;
+      }
+      const clipText = await navigator.clipboard.readText();
+      if (!clipText.trim()) {
+        setError('Clipboard is empty.');
+        return;
+      }
+      const cleaned = cleanUrlInput(clipText);
+      handleUrlChange(cleaned);
+      fetchMediaInfo(cleaned);
     } catch {
-      setError('Clipboard permission blocked. Press Cmd+V or Ctrl+V inside the input box.');
+      setError('Clipboard permission denied. Please paste manually.');
     }
+  }, [handleUrlChange, fetchMediaInfo]);
+
+  const listenToJobProgress = (jobId: string, downloadToken: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const es = new EventSource(`${API_BASE_URL}/api/progress/${jobId}`);
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        const payload: JobProgress = JSON.parse(event.data);
+        setJobProgress(payload);
+
+        if (payload.status === 'ready') {
+          es.close();
+          eventSourceRef.current = null;
+          setActiveFormatId(null);
+          triggerBrowserDownload(
+            `${API_BASE_URL}/api/download/${downloadToken}`
+          );
+        } else if (payload.status === 'error') {
+          es.close();
+          eventSourceRef.current = null;
+          setActiveFormatId(null);
+          setError(payload.message || 'Media conversion process failed.');
+        }
+      } catch {
+        // Ignore unparseable frames
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      eventSourceRef.current = null;
+      setActiveFormatId(null);
+      setError('Connection to progress stream lost.');
+    };
   };
 
   const triggerBrowserDownload = (downloadUrl: string) => {
-    const anchor = document.createElement('a');
-    anchor.href = downloadUrl;
-    anchor.rel = 'noopener noreferrer';
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.setAttribute('download', '');
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
-  const handleDownloadClick = (format: CleanFormat) => {
+  const handleDownloadClick = async (format: CleanFormat) => {
     if (!media) return;
-
-    const updatedHistory = saveHistoryItem({
-      url: url.trim(),
-      platform: media.platform,
-      title: media.title,
-      thumbnail: media.thumbnail,
-      duration: media.duration,
-      uploader: media.uploader,
-      lastFormatLabel: format.label,
-    });
-    setHistory(updatedHistory);
-
-    if (!format.needsMerge && format.streamToken) {
-      triggerBrowserDownload(`${API_BASE_URL}/api/media/stream/${format.streamToken}`);
-      return;
-    }
-
-    eventSourceRef.current?.close();
-    // eslint-disable-next-line react-hooks/purity
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
+    setError(null);
     setActiveFormatId(format.formatId);
-    setJobProgress({ status: 'starting', percent: 5 });
 
-    const sse = new EventSource(`${API_BASE_URL}/api/media/progress/${jobId}`);
-    eventSourceRef.current = sse;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/download/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          formatId: format.formatId,
+          ext: format.ext,
+          type: format.type,
+          needsMerge: format.needsMerge,
+          mediaTitle: media.title,
+        }),
+      });
 
-    sse.onmessage = (event) => {
-      try {
-        const parsed: JobProgress = JSON.parse(event.data);
-        setJobProgress(parsed);
+      const data = await res.json();
 
-        if (parsed.status === 'ready' || parsed.status === 'error') {
-          sse.close();
-          if (parsed.status === 'error') {
-            setError(parsed.message || 'Media conversion failed.');
-          }
-          setTimeout(() => {
-            setActiveFormatId(null);
-          }, 2500);
-        }
-      } catch {
-        // Ignore heartbeat noise
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start download process.');
       }
-    };
 
-    sse.onerror = () => {
-      sse.close();
-    };
-
-    const params = new URLSearchParams({
-      url: url.trim(),
-      formatId: format.formatId,
-      type: format.type,
-      jobId,
-    });
-
-    setTimeout(() => {
-      triggerBrowserDownload(`${API_BASE_URL}/api/media/download?${params.toString()}`);
-    }, 150);
+      if (data.mode === 'direct_stream') {
+        setActiveFormatId(null);
+        triggerBrowserDownload(
+          `${API_BASE_URL}/api/download/${data.token}`
+        );
+      } else if (data.mode === 'job_progress') {
+        listenToJobProgress(data.jobId, data.token);
+      }
+    } catch (err: unknown) {
+      setActiveFormatId(null);
+      const message =
+        err instanceof Error ? err.message : 'Could not initialize download.';
+      setError(message);
+    }
   };
 
-  const filteredFormats = useMemo(
-    () => media?.formats.filter((format) => format.type === activeTab) || [],
-    [media, activeTab]
-  );
+  const filteredFormats = useMemo(() => {
+    if (!media) return [];
+    return media.formats.filter((f) => f.type === activeTab);
+  }, [media, activeTab]);
 
-  const handleSelectHistory = useCallback((selectedUrl: string) => {
-    const cleaned = cleanUrlInput(selectedUrl);
-    setUrl(cleaned);
-    setDetectedPlatform(detectClientPlatform(cleaned));
-    fetchMediaInfo(cleaned);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  const handleSelectHistory = useCallback(
+    (selectedUrl: string) => {
+      const cleaned = cleanUrlInput(selectedUrl);
+      setUrl(cleaned);
+      setDetectedPlatform(detectClientPlatform(cleaned));
+      fetchMediaInfo(cleaned);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [fetchMediaInfo]
+  );
 
   const handleRemoveHistory = useCallback((id: string) => {
     setHistory(removeHistoryItem(id));
@@ -341,36 +388,28 @@ export default function MediaDownloader() {
   }, []);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#030712] text-zinc-100 selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[var(--color-paper)] text-[var(--color-ink)] selection:bg-[var(--color-accent)]/20 selection:text-[var(--color-ink)]">
       <Aurora colorStops={theme.auroraStops} speed={0.7} amplitude={1.2} />
 
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#ffffff06_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+      <div className="pointer-events-none absolute inset-0 lumen-grid-overlay" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-3.5 sm:px-6 pt-10 sm:pt-16 pb-16 sm:pb-24 space-y-8 sm:space-y-10">
         <header className="text-center space-y-4 sm:space-y-5 max-w-2xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md shadow-inner max-w-full"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="font-display lowercase text-3xl sm:text-5xl md:text-6xl tracking-[var(--tracking-display)] text-[var(--color-ink)] font-normal leading-[1.08]"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <ShinyText
-              text="Zero-Watermark • Instant Stream • 1080p HD Muxer"
-              className="text-[11px] sm:text-xs font-medium tracking-wide truncate"
-            />
-          </motion.div>
+            download media from any platform in seconds<span className="text-[var(--color-accent-2)]">.</span>
+          </motion.h1>
 
-          <BlurText
-            text="Download Media From Any Platform in Seconds."
-            className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white leading-[1.15]"
-          />
-
-          <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-[var(--color-muted)] max-w-xl mx-auto leading-relaxed">
             Paste a link from{' '}
-            <span className="text-zinc-200 font-medium">YouTube</span>,{' '}
-            <span className="text-zinc-200 font-medium">Facebook</span>,{' '}
-            <span className="text-zinc-200 font-medium">Instagram</span>, or{' '}
-            <span className="text-zinc-200 font-medium">TikTok</span>. Automatically detects
+            <span className="text-[var(--color-ink)] font-medium">YouTube</span>,{' '}
+            <span className="text-[var(--color-ink)] font-medium">Facebook</span>,{' '}
+            <span className="text-[var(--color-ink)] font-medium">Instagram</span>, or{' '}
+            <span className="text-[var(--color-ink)] font-medium">TikTok</span>. Automatically detects
             streams and delivers crisp MP4 video or studio-grade MP3 audio.
           </p>
         </header>
@@ -379,10 +418,10 @@ export default function MediaDownloader() {
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
               <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-300 ${theme.pillClasses}`}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-pill)] text-xs font-semibold border transition-colors duration-300 ${theme.pillClasses}`}
               >
                 <span
-                  className="w-2 h-2 rounded-full animate-pulse shrink-0"
+                  className="w-2 h-2 rounded-[var(--radius-pill)] motion-safe:animate-pulse motion-reduce:animate-none shrink-0"
                   style={{ backgroundColor: theme.accentHex }}
                 />
                 {theme.name}
@@ -393,9 +432,9 @@ export default function MediaDownloader() {
               type="button"
               onClick={handleClipboardButton}
               aria-label="Paste URL from clipboard"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-white active:bg-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 min-h-[36px] sm:min-h-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-ink-2)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-3)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] px-3 py-1.5 min-h-[36px] sm:min-h-0 rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] transition-colors cursor-pointer"
             >
-              <ClipboardPaste className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <ClipboardPaste className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0" />
               Paste from Clipboard
             </button>
           </div>
@@ -418,9 +457,9 @@ export default function MediaDownloader() {
                   onPaste={handlePaste}
                   placeholder={
                     PLATFORM_SHOWCASE.find((p) => p.platform === detectedPlatform)?.placeholder ||
-                    'https://www.youtube.com/watch?v=... or TikTok / Reel link'
+                    'https://www.youtube.com/watch?v=… or TikTok / Reel link'
                   }
-                  className="w-full bg-transparent pl-3.5 sm:pl-4 pr-11 py-3 sm:py-3.5 text-base text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 rounded-xl"
+                  className="w-full bg-transparent pl-3.5 sm:pl-4 pr-11 py-3 sm:py-3.5 text-base text-[var(--color-ink)] placeholder-[var(--color-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/50 rounded-[var(--radius-card)]"
                   required
                 />
                 {url && (
@@ -433,7 +472,7 @@ export default function MediaDownloader() {
                       setError(null);
                     }}
                     aria-label="Clear URL input"
-                    className="absolute right-2 sm:right-3 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 active:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors cursor-pointer"
+                    className="absolute right-2 sm:right-3 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-[var(--radius-card)] text-[var(--color-muted)] hover:text-[var(--color-ink)] active:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -444,18 +483,18 @@ export default function MediaDownloader() {
                 <button
                   type="submit"
                   disabled={loading || !url.trim()}
-                  aria-label={loading ? 'Extracting media streams...' : 'Extract media streams'}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r ${theme.buttonClasses} hover:brightness-110 active:brightness-95 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:shadow-none text-white font-semibold text-sm px-6 sm:px-7 py-3.5 min-h-[48px] rounded-xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer`}
+                  aria-label={loading ? 'Extracting media streams…' : 'Extract media streams'}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 ${theme.buttonClasses} hover:opacity-95 active:opacity-90 disabled:bg-[var(--color-paper-3)] disabled:text-[var(--color-muted)] disabled:shadow-none font-semibold text-sm px-6 sm:px-7 py-3.5 min-h-[48px] rounded-[var(--radius-pill)] shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer whitespace-nowrap`}
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Extracting...
+                      <span>Extracting…</span>
                     </>
                   ) : (
                     <>
                       <ArrowDownToLine className="w-4 h-4" />
-                      Extract Media
+                      <span>Extract</span>
                     </>
                   )}
                 </button>
@@ -475,19 +514,19 @@ export default function MediaDownloader() {
                     onClick={() => setDetectedPlatform(item.platform)}
                     aria-label={`Select ${item.label} platform`}
                     aria-pressed={isSelected}
-                    className={`group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer ${
+                    className={`group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-[var(--radius-pill)] text-xs font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer ${
                       isSelected
-                        ? 'bg-white/10 border-white/25 text-white shadow-sm'
-                        : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.05]'
+                        ? 'bg-[var(--color-paper-3)] border-[var(--color-accent)] text-[var(--color-ink)] shadow-sm'
+                        : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
                     }`}
                   >
                     <span
-                      className="w-2 h-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
+                      className="w-2 h-2 rounded-[var(--radius-pill)] shrink-0"
                       style={{ backgroundColor: item.dotColor }}
                     />
-                    <span className="font-semibold text-zinc-100">{item.label}</span>
-                    <span className="text-[11px] text-zinc-400 hidden md:inline">
-                      • {item.tag}
+                    <span className="font-semibold text-[var(--color-ink)]">{item.label}</span>
+                    <span className="text-[11px] text-[var(--color-muted)] hidden md:inline font-mono">
+                      / {item.tag}
                     </span>
                   </button>
                 );
@@ -502,9 +541,9 @@ export default function MediaDownloader() {
                 fetchMediaInfo(DEMO_SAMPLE_URL);
               }}
               aria-label="Try 1-Click Demo with sample YouTube video"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 active:bg-emerald-500/30 text-emerald-300 border border-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] sm:min-h-[38px] rounded-[var(--radius-pill)] text-xs font-semibold bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] active:bg-[var(--color-paper)] text-[var(--color-accent)] border border-[var(--color-rule-2)] hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
-              <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <Zap className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0" />
               Try 1-Click Demo
             </button>
           </div>
@@ -517,17 +556,17 @@ export default function MediaDownloader() {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/30 backdrop-blur-md text-red-200 text-sm rounded-xl px-4 py-3.5"
+                className="flex items-center justify-between gap-3 bg-[var(--color-paper-2)] border border-[var(--color-error)] text-[var(--color-ink)] text-sm rounded-[var(--radius-card)] px-4 py-3.5"
               >
                 <div className="flex items-center gap-3">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <AlertCircle className="w-4 h-4 shrink-0 text-[var(--color-error)]" />
                   <span>{error}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setError(null)}
                   aria-label="Dismiss error notification"
-                  className="text-red-400 hover:text-red-200 p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer"
+                  className="text-[var(--color-muted)] hover:text-[var(--color-ink)] p-1 rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] cursor-pointer transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -537,21 +576,21 @@ export default function MediaDownloader() {
         </section>
 
         {loading && (
-          <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-6 space-y-6 animate-pulse">
+          <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-6 space-y-6 motion-safe:animate-pulse motion-reduce:animate-none border border-[var(--color-rule)] bg-[var(--color-paper-2)] rounded-[var(--radius-card)]">
             <div className="flex flex-col sm:flex-row gap-6">
-              <div className="w-full sm:w-64 aspect-video bg-white/5 rounded-xl shrink-0" />
+              <div className="w-full sm:w-64 aspect-video bg-[var(--color-paper-3)] rounded-[var(--radius-card)] shrink-0" />
               <div className="flex-1 space-y-4 py-1">
-                <div className="h-4 bg-white/10 rounded-full w-28" />
-                <div className="h-6 bg-white/10 rounded-lg w-4/5" />
-                <div className="h-4 bg-white/5 rounded-lg w-1/3" />
-                <div className="h-10 bg-white/10 rounded-xl w-56 mt-4" />
+                <div className="h-4 bg-[var(--color-paper-3)] rounded-[var(--radius-pill)] w-28" />
+                <div className="h-6 bg-[var(--color-paper-3)] rounded-[var(--radius-card)] w-4/5" />
+                <div className="h-4 bg-[var(--color-paper-3)] rounded-[var(--radius-card)] w-1/3" />
+                <div className="h-10 bg-[var(--color-paper-3)] rounded-[var(--radius-card)] w-56 mt-4" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="h-20 bg-white/5 rounded-xl" />
-              <div className="h-20 bg-white/5 rounded-xl" />
-              <div className="h-20 bg-white/5 rounded-xl" />
-              <div className="h-20 bg-white/5 rounded-xl" />
+              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
+              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
+              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
+              <div className="h-20 bg-[var(--color-paper-3)] rounded-[var(--radius-card)]" />
             </div>
           </SpotlightCard>
         )}
@@ -566,25 +605,28 @@ export default function MediaDownloader() {
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-5"
             >
-              <SpotlightCard spotlightColor={theme.spotlightRgba} className="p-4 sm:p-6">
+              <SpotlightCard
+                spotlightColor={theme.spotlightRgba}
+                className="p-4 sm:p-6 border border-[var(--color-rule)] bg-[var(--color-paper-2)] rounded-[var(--radius-card)]"
+              >
                 <div className="flex flex-col md:flex-row gap-5 sm:gap-6 items-start">
-                  <div className="relative w-full md:w-64 aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 shrink-0 group shadow-2xl">
+                  <div className="relative w-full md:w-64 aspect-video rounded-[var(--radius-card)] overflow-hidden bg-[var(--color-paper)] border border-[var(--color-rule)] shrink-0 group">
                     {media.thumbnail ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={media.thumbnail}
                         alt={`Thumbnail preview for ${media.title}`}
-                        loading="lazy"
+                        fetchPriority="high"
                         decoding="async"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                      <div className="w-full h-full flex items-center justify-center text-[var(--color-muted)]">
                         <Tv className="w-10 h-10" />
                       </div>
                     )}
                     {media.duration > 0 && (
-                      <span className="absolute bottom-2.5 right-2.5 bg-black/80 backdrop-blur-md text-white text-xs font-mono px-2.5 py-0.5 rounded-md border border-white/10">
+                      <span className="absolute bottom-2.5 right-2.5 bg-[var(--color-paper)] text-[var(--color-ink)] text-xs font-mono tabular-nums px-2.5 py-0.5 rounded-[var(--radius-card)] border border-[var(--color-rule)]">
                         {formatDuration(media.duration)}
                       </span>
                     )}
@@ -594,16 +636,16 @@ export default function MediaDownloader() {
                     <div className="space-y-2 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${theme.pillClasses}`}
+                          className={`px-2.5 py-0.5 rounded-[var(--radius-pill)] text-xs font-semibold border ${theme.pillClasses}`}
                         >
-                          {PLATFORM_THEMES[media.platform].name.replace(' Engine', '')}
+                          {PLATFORM_THEMES[media.platform].name.replace(' engine', '')}
                         </span>
-                        <span className="text-xs text-zinc-400 font-medium truncate max-w-[200px] sm:max-w-none">
+                        <span className="text-xs text-[var(--color-muted)] font-medium truncate max-w-[200px] sm:max-w-none">
                           by {media.uploader}
                         </span>
                       </div>
 
-                      <h2 className="text-base sm:text-xl font-bold text-white line-clamp-2 leading-snug break-words">
+                      <h2 className="text-base sm:text-xl font-bold text-[var(--color-ink)] line-clamp-2 leading-snug break-words">
                         {media.title}
                       </h2>
                     </div>
@@ -611,7 +653,7 @@ export default function MediaDownloader() {
                     <div
                       role="tablist"
                       aria-label="Media format categories"
-                      className="grid grid-cols-2 sm:inline-flex p-1 rounded-xl bg-zinc-950/90 border border-white/10 w-full sm:w-fit"
+                      className="grid grid-cols-2 sm:inline-flex p-1 rounded-[var(--radius-pill)] bg-[var(--color-paper)] border border-[var(--color-rule)] w-full sm:w-fit"
                     >
                       {(['video', 'audio'] as const).map((tab) => {
                         const isActive = activeTab === tab;
@@ -622,15 +664,15 @@ export default function MediaDownloader() {
                             role="tab"
                             aria-selected={isActive}
                             onClick={() => setActiveTab(tab)}
-                            className={`relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] rounded-lg text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors cursor-pointer ${
-                              isActive ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+                            className={`relative inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] rounded-[var(--radius-pill)] text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer ${
+                              isActive ? 'text-[var(--color-accent-ink)]' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                           >
                             {isActive && (
                               <motion.div
                                 layoutId="activeMediaTab"
                                 transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
-                                className={`absolute inset-0 rounded-lg bg-gradient-to-r ${theme.buttonClasses}`}
+                                className={`absolute inset-0 rounded-[var(--radius-pill)] ${theme.buttonClasses}`}
                               />
                             )}
                             <span className="relative z-10 inline-flex items-center justify-center gap-1.5 sm:gap-2 truncate">
@@ -661,23 +703,23 @@ export default function MediaDownloader() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="mt-6 pt-5 border-t border-white/10 space-y-2.5"
+                      className="mt-6 pt-5 border-t border-[var(--color-rule)] space-y-2.5"
                     >
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-200 font-medium flex items-center gap-2">
+                        <span className="text-[var(--color-ink)] font-medium flex items-center gap-2">
                           {jobProgress.status === 'ready' ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <CheckCircle2 className="w-4 h-4 text-[var(--color-success)]" />
                           ) : (
-                            <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                            <Loader2 className="w-4 h-4 animate-spin text-[var(--color-accent)]" />
                           )}
-                          {jobProgress.status === 'starting' && 'Initializing extraction pipeline...'}
+                          {jobProgress.status === 'starting' && 'Initializing extraction pipeline…'}
                           {jobProgress.status === 'downloading' &&
-                            'Downloading high-bitrate stream tracks...'}
+                            'Downloading high-bitrate stream tracks…'}
                           {jobProgress.status === 'merging' &&
-                            'Muxing video & audio with FFmpeg...'}
+                            'Muxing video & audio with FFmpeg…'}
                           {jobProgress.status === 'ready' && 'Stream complete — saving file!'}
                         </span>
-                        <span className="font-mono font-semibold text-emerald-400">
+                        <span className="font-mono tabular-nums font-semibold text-[var(--color-accent)]">
                           {jobProgress.percent}%
                         </span>
                       </div>
@@ -688,13 +730,13 @@ export default function MediaDownloader() {
                         aria-valuemin={0}
                         aria-valuemax={100}
                         aria-label="Media conversion progress"
-                        className="w-full h-2.5 bg-zinc-950 rounded-full overflow-hidden border border-white/10 p-0.5"
+                        className="w-full h-2.5 bg-[var(--color-paper)] rounded-[var(--radius-pill)] overflow-hidden border border-[var(--color-rule)] p-0.5"
                       >
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${jobProgress.percent}%` }}
                           transition={{ ease: 'easeOut', duration: 0.3 }}
-                          className={`h-full rounded-full bg-gradient-to-r ${theme.buttonClasses}`}
+                          className={`h-full rounded-[var(--radius-pill)] ${theme.buttonClasses}`}
                         />
                       </div>
                     </motion.div>
@@ -721,9 +763,9 @@ export default function MediaDownloader() {
                         spotlightColor={theme.spotlightRgba}
                         onClick={() => !activeFormatId && handleDownloadClick(format)}
                         aria-label={`Download ${format.label} ${format.ext.toUpperCase()}${sizeText ? `, approx ${sizeText}` : ''}`}
-                        className={`w-full p-3.5 sm:p-4 min-h-[72px] cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none transition-all ${
+                        className={`w-full p-3.5 sm:p-4 min-h-[72px] cursor-pointer group rounded-[var(--radius-card)] border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] hover:border-[var(--color-rule-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none transition-colors ${
                           isProcessing
-                            ? 'ring-2 ring-emerald-400 border-emerald-400/50 shadow-lg shadow-emerald-500/15'
+                            ? 'ring-2 ring-[var(--color-accent)] border-[var(--color-accent)] shadow-lg shadow-[var(--color-accent)]/15'
                             : activeFormatId
                             ? 'opacity-50 pointer-events-none'
                             : ''
@@ -732,32 +774,40 @@ export default function MediaDownloader() {
                         <div className="flex items-center justify-between gap-3 sm:gap-4">
                           <div className="space-y-1 sm:space-y-1.5 min-w-0 text-left">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm sm:text-base font-bold text-white group-hover:text-emerald-300 transition-colors truncate">
+                              <span className="text-sm sm:text-base font-bold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors truncate">
                                 {format.label}
                               </span>
                               {!format.needsMerge ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-paper)] text-[var(--color-accent)] border border-[var(--color-rule)] shrink-0">
                                   <Zap className="w-3 h-3" />
                                   Instant
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-zinc-300 border border-white/10 shrink-0">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-paper)] text-[var(--color-ink-2)] border border-[var(--color-rule)] shrink-0">
                                   HD Mux
                                 </span>
                               )}
                             </div>
 
-                            <p className="text-xs text-zinc-400 truncate">
-                              {format.ext.toUpperCase()}
-                              {sizeText ? ` • ~${sizeText}` : ''}
-                              {format.needsMerge
-                                ? ' • FFmpeg Studio Merge'
-                                : ' • Direct Zero-Disk Stream'}
-                            </p>
+                            <div className="text-xs text-[var(--color-muted)] truncate flex items-center gap-1.5">
+                              <span>{format.ext.toUpperCase()}</span>
+                              {sizeText && (
+                                <>
+                                  <span className="text-[var(--color-rule-2)]">/</span>
+                                  <span className="tabular-nums">~{sizeText}</span>
+                                </>
+                              )}
+                              <span className="text-[var(--color-rule-2)]">/</span>
+                              <span>
+                                {format.needsMerge
+                                  ? 'FFmpeg Studio Merge'
+                                  : 'Direct Zero-Disk Stream'}
+                              </span>
+                            </div>
                           </div>
 
                           <div
-                            className={`w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 group-hover:border-transparent group-hover:bg-gradient-to-br ${theme.buttonClasses} flex items-center justify-center text-zinc-300 group-hover:text-white transition-all duration-300 shrink-0 shadow-inner`}
+                            className="w-11 h-11 sm:w-10 sm:h-10 rounded-[var(--radius-pill)] bg-[var(--color-paper)] border border-[var(--color-rule)] group-hover:border-[var(--color-accent)] group-hover:bg-[var(--color-accent)] flex items-center justify-center text-[var(--color-ink-2)] group-hover:text-[var(--color-accent-ink)] transition-colors duration-300 shrink-0 shadow-inner"
                           >
                             {isProcessing ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -784,14 +834,18 @@ export default function MediaDownloader() {
           onClearAll={handleClearAllHistory}
         />
 
-        <footer className="pt-6 sm:pt-10 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
-          <div className="flex items-center gap-2 text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span>Down-link Stream Engine</span>
+        <footer className="pt-6 sm:pt-8 border-t border-[var(--color-rule)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--color-muted)]">
+          <div className="flex items-center gap-2 text-[var(--color-ink-2)]">
+            <span className="w-1.5 h-1.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)]" />
+            <span className="font-medium">Down-link Stream Engine</span>
           </div>
-          <p className="text-zinc-500 text-center sm:text-right">
-            Zero-watermark CDN streaming • No logs • High fidelity MP4 & MP3
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-center sm:text-right">
+            <span>zero-watermark CDN streaming</span>
+            <span className="text-[var(--color-rule-2)]">/</span>
+            <span>no logs</span>
+            <span className="text-[var(--color-rule-2)]">/</span>
+            <span>high fidelity MP4 & MP3</span>
+          </div>
         </footer>
       </div>
     </div>

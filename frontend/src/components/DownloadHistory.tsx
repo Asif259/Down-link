@@ -15,29 +15,29 @@ const PLATFORM_BADGES: Record<
   { label: string; classes: string; spotlight: string }
 > = {
   youtube: {
-    label: 'YouTube',
-    classes: 'bg-red-500/15 text-red-400 border-red-500/30',
-    spotlight: 'rgba(239, 68, 68, 0.16)',
+    label: 'youtube',
+    classes: 'bg-[var(--color-paper-3)] text-[var(--color-accent-2)] border-[var(--color-rule-2)]',
+    spotlight: 'oklch(72% 0.15 12 / 0.16)',
   },
   facebook: {
-    label: 'Facebook',
-    classes: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    spotlight: 'rgba(59, 130, 246, 0.16)',
+    label: 'facebook',
+    classes: 'bg-[var(--color-paper-3)] text-[var(--color-ink-2)] border-[var(--color-rule-2)]',
+    spotlight: 'oklch(85% 0.017 298 / 0.16)',
   },
   instagram: {
-    label: 'Instagram',
-    classes: 'bg-pink-500/15 text-pink-400 border-pink-500/30',
-    spotlight: 'rgba(236, 72, 153, 0.16)',
+    label: 'instagram',
+    classes: 'bg-[var(--color-paper-3)] text-[var(--color-accent-2)] border-[var(--color-rule-2)]',
+    spotlight: 'oklch(72% 0.15 12 / 0.16)',
   },
   tiktok: {
-    label: 'TikTok',
-    classes: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
-    spotlight: 'rgba(6, 182, 212, 0.16)',
+    label: 'tiktok',
+    classes: 'bg-[var(--color-paper-3)] text-[var(--color-accent)] border-[var(--color-rule-2)]',
+    spotlight: 'oklch(80% 0.15 62 / 0.16)',
   },
   unknown: {
-    label: 'Media',
-    classes: 'bg-zinc-800 text-zinc-300 border-zinc-700',
-    spotlight: 'rgba(16, 185, 129, 0.14)',
+    label: 'stream',
+    classes: 'bg-[var(--color-paper-3)] text-[var(--color-muted)] border-[var(--color-rule)]',
+    spotlight: 'oklch(80% 0.13 155 / 0.14)',
   },
 };
 
@@ -61,12 +61,12 @@ function DownloadHistory({
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-4 pt-4 [contain:content]" aria-label="Recent Extractions History">
+    <section className="space-y-4 pt-6 border-t border-[var(--color-rule)] [contain:content]" aria-label="Recent extractions history">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-emerald-400" />
-          <h3 className="text-sm font-semibold text-zinc-200 tracking-tight">
-            Recent Extractions ({items.length})
+          <Clock className="w-4 h-4 text-[var(--color-accent)]" />
+          <h3 className="text-sm font-medium text-[var(--color-ink)] lowercase tracking-normal">
+            recent extractions ({items.length})
           </h3>
         </div>
 
@@ -74,10 +74,10 @@ function DownloadHistory({
           type="button"
           onClick={onClearAll}
           aria-label="Clear all extraction history"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-lg text-xs text-zinc-400 hover:text-red-400 active:text-red-300 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-[var(--radius-pill)] text-xs text-[var(--color-muted)] hover:text-[var(--color-error)] active:scale-[0.98] hover:bg-[var(--color-paper-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] motion-safe:transition-transform motion-reduce:transition-none cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5 shrink-0" />
-          Clear All
+          clear all
         </button>
       </div>
 
@@ -90,8 +90,8 @@ function DownloadHistory({
             <SpotlightCard
               key={item.id}
               spotlightColor={badge.spotlight}
-              className={`p-3 sm:p-3.5 group [content-visibility:auto] [contain-intrinsic-size:auto_90px] ${
-                isCurrent ? 'border-emerald-500/40 ring-1 ring-emerald-500/30' : ''
+              className={`p-3 sm:p-3.5 group [content-visibility:auto] [contain-intrinsic-size:auto_90px] border-[var(--color-rule)] bg-[var(--color-paper-2)] rounded-[var(--radius-card)] ${
+                isCurrent ? 'ring-1 ring-[var(--color-accent)] border-[var(--color-accent)]' : ''
               }`}
             >
               <div className="flex gap-3 sm:gap-3.5 items-stretch">
@@ -100,24 +100,24 @@ function DownloadHistory({
                   disabled={isLoading}
                   onClick={() => onSelect(item.url)}
                   aria-label={`Reload streams for ${item.title}`}
-                  className="relative w-24 h-18 sm:w-28 sm:h-20 bg-zinc-950 rounded-xl overflow-hidden shrink-0 border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-all cursor-pointer"
+                  className="relative w-24 h-18 sm:w-28 sm:h-20 bg-[var(--color-paper)] rounded-[8px] overflow-hidden shrink-0 border border-[var(--color-rule)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] transition-colors cursor-pointer"
                 >
                   {item.thumbnail ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={item.thumbnail}
                       alt={item.title || 'Thumbnail preview'}
-                      loading="lazy"
+                      fetchPriority="high"
                       decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                    <div className="w-full h-full flex items-center justify-center text-[var(--color-muted)]">
                       <Film className="w-5 h-5" />
                     </div>
                   )}
                   {item.duration > 0 && (
-                    <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+                    <span className="absolute bottom-1 right-1 bg-[var(--color-paper-3)] text-[var(--color-ink)] text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--color-rule)]">
                       {formatDuration(item.duration)}
                     </span>
                   )}
@@ -127,33 +127,33 @@ function DownloadHistory({
                   <div className="pr-8 sm:pr-7 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badge.classes}`}
+                        className={`px-2 py-0.5 rounded-[var(--radius-pill)] text-[10px] font-medium border lowercase ${badge.classes}`}
                       >
                         {badge.label}
                       </span>
-                      <span className="text-[11px] text-zinc-400 font-medium">
+                      <span className="text-[11px] text-[var(--color-muted)] font-mono">
                         {formatRelativeTime(item.timestamp)}
                       </span>
                     </div>
 
-                    <p className="text-xs font-semibold text-zinc-100 truncate" title={item.title}>
+                    <p className="text-xs font-normal text-[var(--color-ink)] truncate" title={item.title}>
                       {item.title}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5 gap-2">
+                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[var(--color-rule)] gap-2">
                     <button
                       type="button"
                       disabled={isLoading}
                       onClick={() => onSelect(item.url)}
                       aria-label={`Reload ${item.lastFormatLabel ? item.lastFormatLabel.split(' ')[0] : 'stream'} for ${item.title}`}
-                      className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-emerald-400 hover:text-emerald-300 active:text-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg px-2 py-1.5 min-h-[34px] hover:bg-emerald-500/10 transition-colors disabled:opacity-50 cursor-pointer truncate"
+                      className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-medium text-[var(--color-accent)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] rounded px-1.5 py-1 min-h-[34px] transition-colors disabled:opacity-50 cursor-pointer truncate"
                     >
                       <RotateCcw className="w-3 h-3 shrink-0" />
-                      <span className="truncate">
+                      <span className="truncate lowercase">
                         {item.lastFormatLabel
-                          ? `Reload (${item.lastFormatLabel.split(' ')[0]})`
-                          : 'Reload Streams'}
+                          ? `reload (${item.lastFormatLabel.split(' ')[0].toLowerCase()})`
+                          : 'reload stream'}
                       </span>
                     </button>
 
@@ -163,7 +163,7 @@ function DownloadHistory({
                       rel="noopener noreferrer"
                       title="Open source link in new tab"
                       aria-label="Open source link in new tab"
-                      className="w-8 h-8 sm:w-7 sm:h-7 shrink-0 flex items-center justify-center text-zinc-400 hover:text-zinc-200 active:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors"
+                      className="w-8 h-8 sm:w-7 sm:h-7 shrink-0 flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] rounded-[var(--radius-pill)] hover:bg-[var(--color-paper-3)] transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
@@ -174,7 +174,7 @@ function DownloadHistory({
                   type="button"
                   onClick={() => onRemove(item.id)}
                   aria-label={`Remove ${item.title} from history`}
-                  className="absolute top-2 right-2 w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 active:text-white hover:bg-white/10 active:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors cursor-pointer"
+                  className="absolute top-2 right-2 w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-[var(--radius-pill)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-error)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-paper)] transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

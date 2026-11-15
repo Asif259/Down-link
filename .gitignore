@@ -16,3 +16,4 @@ backend/tmp/
 .env.*
 !.env.example
 .DS_Store
+.hallmark/
