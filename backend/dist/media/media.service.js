@@ -17,6 +17,8 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const stream_1 = require("stream");
+const promises_1 = require("stream/promises");
 const rxjs_1 = require("rxjs");
 const binary_service_1 = require("../binary/binary.service");
 const concurrency_service_1 = require("../common/concurrency.service");
@@ -537,7 +539,7 @@ let MediaService = MediaService_1 = class MediaService {
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 7000);
-                const res = await fetch(`${base}/api/v1/videos/${videoId}`, {
+                const res = await fetch(`${base}/api/v1/videos/${videoId}?local=true`, {
                     headers: {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     },
@@ -547,6 +549,12 @@ let MediaService = MediaService_1 = class MediaService {
                     continue;
                 const data = await res.json();
                 if (data && (data.adaptiveFormats?.length || data.formatStreams?.length)) {
+                    data._instanceBase = base;
+                    for (const f of [...(data.adaptiveFormats || []), ...(data.formatStreams || [])]) {
+                        if (f.url && f.url.startsWith('/')) {
+                            f.url = `${base}${f.url}`;
+                        }
+                    }
                     this.invidiousCache.set(videoId, {
                         data,
                         expiresAt: Date.now() + 15 * 60 * 1000,
@@ -584,7 +592,7 @@ let MediaService = MediaService_1 = class MediaService {
                         targetUrl: f.url,
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                            Referer: 'https://www.youtube.com/',
+                            Referer: `${data._instanceBase || 'https://www.youtube.com'}/watch?v=${videoId}`,
                         },
                         filename: this.sanitizeFilename(title, ext),
                         mimeType: ext === 'webm' ? 'video/webm' : 'video/mp4',
@@ -664,134 +672,256 @@ let MediaService = MediaService_1 = class MediaService {
         const ext = type === 'audio' ? 'mp3' : 'mp4';
         const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const finalPath = path.join(this.tempDir, `${uniqueId}.${ext}`);
-        this.emitProgress(jobId, { status: 'starting', percent: 10 });
+        const tempVideoPath = path.join(this.tempDir, `${uniqueId}_v.part`);
+        const tempAudioPath = path.join(this.tempDir, `${uniqueId}_a.part`);
         const cleanupTempArtifacts = () => {
             try {
-                if (fs.existsSync(finalPath)) {
-                    fs.unlinkSync(finalPath);
-                }
+                if (fs.existsSync(tempVideoPath))
+                    fs.unlinkSync(tempVideoPath);
             }
             catch { }
+            try {
+                if (fs.existsSync(tempAudioPath))
+                    fs.unlinkSync(tempAudioPath);
+            }
+            catch { }
+        };
+        const cleanupAll = () => {
+            cleanupTempArtifacts();
+            try {
+                if (fs.existsSync(finalPath))
+                    fs.unlinkSync(finalPath);
+            }
+            catch { }
+        };
+        const base = rawData._instanceBase || this.invidiousInstances[0];
+        const downloadHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Referer: `${base}/watch?v=${videoId}`,
         };
         const audioFormats = (rawData.adaptiveFormats || []).filter((f) => f.type?.includes('audio') || f.container === 'm4a');
         const bestAudio = audioFormats.find((f) => String(f.itag) === '140') ||
             audioFormats[0];
-        const ffmpegArgs = [
-            '-y',
-            '-user_agent',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        ];
-        if (type === 'audio') {
-            if (!bestAudio?.url) {
-                throw new common_1.BadRequestException('Audio stream not available for this YouTube video.');
-            }
-            ffmpegArgs.push('-i', bestAudio.url, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', finalPath);
-        }
-        else {
-            const targetResMatch = formatId.match(/youtube-fallback-(\d+p)/);
-            const targetRes = targetResMatch ? targetResMatch[1] : null;
-            const videoFormats = (rawData.adaptiveFormats || []).filter((f) => f.type?.includes('video') && f.url);
-            let chosenVideo = targetRes
-                ? videoFormats.find((f) => f.resolution === targetRes && f.container === 'mp4') ||
-                    videoFormats.find((f) => f.resolution === targetRes)
-                : null;
-            if (!chosenVideo) {
-                chosenVideo = videoFormats[0];
-            }
-            if (!chosenVideo?.url) {
-                throw new common_1.BadRequestException('Video stream not available for this YouTube video.');
-            }
-            if (bestAudio?.url) {
-                ffmpegArgs.push('-i', chosenVideo.url, '-i', bestAudio.url, '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', finalPath);
+        this.emitProgress(jobId, { status: 'starting', percent: 10 });
+        try {
+            if (type === 'audio') {
+                if (!bestAudio?.url) {
+                    throw new common_1.BadRequestException('Audio stream not available for this YouTube video.');
+                }
+                this.emitProgress(jobId, { status: 'downloading', percent: 35 });
+                const aRes = await fetch(bestAudio.url, {
+                    headers: downloadHeaders,
+                    signal: abortSignal,
+                });
+                if (!aRes.ok || !aRes.body) {
+                    throw new common_1.BadRequestException(`Could not stream audio: upstream HTTP ${aRes.status}`);
+                }
+                await (0, promises_1.pipeline)(stream_1.Readable.fromWeb(aRes.body), fs.createWriteStream(tempAudioPath));
+                this.emitProgress(jobId, { status: 'merging', percent: 80 });
+                const ffmpegArgs = [
+                    '-y',
+                    '-i',
+                    tempAudioPath,
+                    '-vn',
+                    '-c:a',
+                    'libmp3lame',
+                    '-q:a',
+                    '2',
+                    finalPath,
+                ];
+                await this.concurrency.run(() => new Promise((resolve, reject) => {
+                    const child = (0, child_process_1.spawn)(this.binaryService.ffmpegBinaryPath, ffmpegArgs, {
+                        shell: false,
+                        env: this.binaryService.spawnEnv,
+                    });
+                    let isDone = false;
+                    let stderr = '';
+                    let timer;
+                    const abortHandler = () => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        if (timer)
+                            clearTimeout(timer);
+                        try {
+                            child.kill('SIGKILL');
+                        }
+                        catch { }
+                        cleanupAll();
+                        reject(new common_1.BadRequestException('Download cancelled by client.'));
+                    };
+                    if (abortSignal) {
+                        if (abortSignal.aborted) {
+                            abortHandler();
+                            return;
+                        }
+                        abortSignal.addEventListener('abort', abortHandler, { once: true });
+                    }
+                    timer = setTimeout(() => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        try {
+                            child.kill('SIGKILL');
+                        }
+                        catch { }
+                        cleanupAll();
+                        this.emitProgress(jobId, {
+                            status: 'error',
+                            percent: 0,
+                            message: 'Processing timed out.',
+                        });
+                        reject(new common_1.GatewayTimeoutException('Media processing exceeded maximum allowable time.'));
+                    }, this.mergeTimeoutMs);
+                    timer.unref();
+                    child.stderr.on('data', (c) => (stderr += c.toString()));
+                    child.on('close', (code) => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        clearTimeout(timer);
+                        if (abortSignal)
+                            abortSignal.removeEventListener('abort', abortHandler);
+                        if (code !== 0 || !fs.existsSync(finalPath)) {
+                            cleanupAll();
+                            const errDetail = stderr.trim().split('\n').reverse().find((l) => l.trim())?.slice(0, 200) ||
+                                `exit code ${code}`;
+                            this.logger.warn(`FFmpeg fallback audio conversion failed: ${errDetail}`);
+                            return reject(new common_1.BadRequestException(`Failed to convert audio: ${errDetail}`));
+                        }
+                        this.emitProgress(jobId, { status: 'ready', percent: 100 });
+                        resolve();
+                    });
+                    child.on('error', (err) => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        if (timer)
+                            clearTimeout(timer);
+                        cleanupAll();
+                        this.logger.error(`FFmpeg process error: ${err.message}`);
+                        reject(new common_1.BadRequestException(`Failed to execute audio converter: ${err.message}`));
+                    });
+                }));
             }
             else {
-                ffmpegArgs.push('-i', chosenVideo.url, '-c', 'copy', '-movflags', '+faststart', finalPath);
+                const targetResMatch = formatId.match(/youtube-fallback-(\d+p)/);
+                const targetRes = targetResMatch ? targetResMatch[1] : null;
+                const videoFormats = (rawData.adaptiveFormats || []).filter((f) => f.type?.includes('video') && f.url);
+                let chosenVideo = targetRes
+                    ? videoFormats.find((f) => f.resolution === targetRes && f.container === 'mp4') ||
+                        videoFormats.find((f) => f.resolution === targetRes)
+                    : null;
+                if (!chosenVideo) {
+                    chosenVideo = videoFormats[0];
+                }
+                if (!chosenVideo?.url) {
+                    throw new common_1.BadRequestException('Video stream not available for this YouTube video.');
+                }
+                this.emitProgress(jobId, { status: 'downloading', percent: 35 });
+                const [vRes, aRes] = await Promise.all([
+                    fetch(chosenVideo.url, { headers: downloadHeaders, signal: abortSignal }),
+                    bestAudio?.url
+                        ? fetch(bestAudio.url, { headers: downloadHeaders, signal: abortSignal })
+                        : null,
+                ]);
+                if (!vRes.ok || !vRes.body) {
+                    throw new common_1.BadRequestException(`Could not stream video: upstream HTTP ${vRes.status}`);
+                }
+                const downloadTasks = [
+                    (0, promises_1.pipeline)(stream_1.Readable.fromWeb(vRes.body), fs.createWriteStream(tempVideoPath)),
+                ];
+                if (aRes?.ok && aRes.body) {
+                    downloadTasks.push((0, promises_1.pipeline)(stream_1.Readable.fromWeb(aRes.body), fs.createWriteStream(tempAudioPath)));
+                }
+                await Promise.all(downloadTasks);
+                this.emitProgress(jobId, { status: 'merging', percent: 85 });
+                const ffmpegArgs = ['-y', '-i', tempVideoPath];
+                if (fs.existsSync(tempAudioPath)) {
+                    ffmpegArgs.push('-i', tempAudioPath, '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', finalPath);
+                }
+                else {
+                    ffmpegArgs.push('-c', 'copy', '-movflags', '+faststart', finalPath);
+                }
+                await this.concurrency.run(() => new Promise((resolve, reject) => {
+                    const child = (0, child_process_1.spawn)(this.binaryService.ffmpegBinaryPath, ffmpegArgs, {
+                        shell: false,
+                        env: this.binaryService.spawnEnv,
+                    });
+                    let isDone = false;
+                    let stderr = '';
+                    let timer;
+                    const abortHandler = () => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        if (timer)
+                            clearTimeout(timer);
+                        try {
+                            child.kill('SIGKILL');
+                        }
+                        catch { }
+                        cleanupAll();
+                        reject(new common_1.BadRequestException('Download cancelled by client.'));
+                    };
+                    if (abortSignal) {
+                        if (abortSignal.aborted) {
+                            abortHandler();
+                            return;
+                        }
+                        abortSignal.addEventListener('abort', abortHandler, { once: true });
+                    }
+                    timer = setTimeout(() => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        try {
+                            child.kill('SIGKILL');
+                        }
+                        catch { }
+                        cleanupAll();
+                        this.emitProgress(jobId, {
+                            status: 'error',
+                            percent: 0,
+                            message: 'Processing timed out.',
+                        });
+                        reject(new common_1.GatewayTimeoutException('Media processing exceeded maximum allowable time.'));
+                    }, this.mergeTimeoutMs);
+                    timer.unref();
+                    child.stderr.on('data', (c) => (stderr += c.toString()));
+                    child.on('close', (code) => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        clearTimeout(timer);
+                        if (abortSignal)
+                            abortSignal.removeEventListener('abort', abortHandler);
+                        if (code !== 0 || !fs.existsSync(finalPath)) {
+                            cleanupAll();
+                            const errDetail = stderr.trim().split('\n').reverse().find((l) => l.trim())?.slice(0, 200) ||
+                                `exit code ${code}`;
+                            this.logger.warn(`FFmpeg fallback merge failed: ${errDetail}`);
+                            return reject(new common_1.BadRequestException(`Failed to process media file: ${errDetail}`));
+                        }
+                        this.emitProgress(jobId, { status: 'ready', percent: 100 });
+                        resolve();
+                    });
+                    child.on('error', (err) => {
+                        if (isDone)
+                            return;
+                        isDone = true;
+                        if (timer)
+                            clearTimeout(timer);
+                        cleanupAll();
+                        this.logger.error(`FFmpeg process error: ${err.message}`);
+                        reject(new common_1.BadRequestException(`Failed to execute media converter process: ${err.message}`));
+                    });
+                }));
             }
         }
-        this.emitProgress(jobId, { status: 'downloading', percent: 30 });
-        await this.concurrency.run(() => new Promise((resolve, reject) => {
-            const child = (0, child_process_1.spawn)(this.binaryService.ffmpegBinaryPath, ffmpegArgs, {
-                shell: false,
-                env: this.binaryService.spawnEnv,
-            });
-            let isDone = false;
-            let stderr = '';
-            let timer;
-            const abortHandler = () => {
-                if (isDone)
-                    return;
-                isDone = true;
-                if (timer)
-                    clearTimeout(timer);
-                try {
-                    child.kill('SIGKILL');
-                }
-                catch { }
-                cleanupTempArtifacts();
-                reject(new common_1.BadRequestException('Download cancelled by client.'));
-            };
-            if (abortSignal) {
-                if (abortSignal.aborted) {
-                    abortHandler();
-                    return;
-                }
-                abortSignal.addEventListener('abort', abortHandler, { once: true });
-            }
-            timer = setTimeout(() => {
-                if (isDone)
-                    return;
-                isDone = true;
-                try {
-                    child.kill('SIGKILL');
-                }
-                catch { }
-                cleanupTempArtifacts();
-                this.emitProgress(jobId, {
-                    status: 'error',
-                    percent: 0,
-                    message: 'Processing timed out.',
-                });
-                reject(new common_1.GatewayTimeoutException('Media processing exceeded maximum allowable time.'));
-            }, this.mergeTimeoutMs);
-            timer.unref();
-            child.stderr.on('data', (chunk) => {
-                stderr += chunk.toString();
-                this.emitProgress(jobId, { status: 'merging', percent: 75 });
-            });
-            child.on('close', (code) => {
-                if (isDone)
-                    return;
-                isDone = true;
-                clearTimeout(timer);
-                if (abortSignal) {
-                    abortSignal.removeEventListener('abort', abortHandler);
-                }
-                if (code !== 0 || !fs.existsSync(finalPath)) {
-                    cleanupTempArtifacts();
-                    const errDetail = stderr.trim().split('\n').reverse().find((l) => l.trim())?.slice(0, 200) ||
-                        `exit code ${code}`;
-                    this.logger.warn(`FFmpeg fallback merge failed: ${stderr.trim().slice(0, 300)}`);
-                    this.emitProgress(jobId, {
-                        status: 'error',
-                        percent: 0,
-                        message: `Failed to process media file: ${errDetail}`,
-                    });
-                    return reject(new common_1.BadRequestException(`Failed to process media file: ${errDetail}`));
-                }
-                this.emitProgress(jobId, { status: 'ready', percent: 100 });
-                resolve();
-            });
-            child.on('error', (err) => {
-                if (isDone)
-                    return;
-                isDone = true;
-                if (timer)
-                    clearTimeout(timer);
-                cleanupTempArtifacts();
-                this.logger.error(`FFmpeg process error: ${err.message}`);
-                reject(new common_1.BadRequestException(`Failed to execute media converter process: ${err.message}`));
-            });
-        }));
+        finally {
+            cleanupTempArtifacts();
+        }
         return {
             filePath: finalPath,
             filename: this.sanitizeFilename(title, ext),
