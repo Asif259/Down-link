@@ -51,6 +51,7 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
         bytes: number;
     };
     initCookiesDirectory(): void;
+    private sanitizeCookieContent;
     createTempCookieFile(platform: SupportedPlatform): string | null;
     removeTempCookieFile(tempCookiePath: string | null): void;
     updateMasterCookies(secret: string, rawOrBase64Data: string): Promise<{

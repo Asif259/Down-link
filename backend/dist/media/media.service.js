@@ -98,7 +98,7 @@ let MediaService = MediaService_1 = class MediaService {
             process.env.COOKIES_BASE64.trim() &&
             process.env.COOKIES_BASE64 !== 'undefined') {
             try {
-                const decoded = Buffer.from(process.env.COOKIES_BASE64, 'base64').toString('utf-8');
+                const decoded = this.sanitizeCookieContent(Buffer.from(process.env.COOKIES_BASE64, 'base64').toString('utf-8'));
                 const targetPath = path.join(this.cookiesDir, 'cookies.txt');
                 fs.writeFileSync(targetPath, decoded, { mode: 0o600 });
                 fs.writeFileSync(this.persistentCookiesPath, decoded, { mode: 0o600 });
@@ -118,6 +118,17 @@ let MediaService = MediaService_1 = class MediaService {
             }
             catch { }
         }
+    }
+    sanitizeCookieContent(rawContent) {
+        const lines = rawContent.split('\n');
+        const sanitized = lines.filter((line) => {
+            if (!line.trim() || line.startsWith('#'))
+                return true;
+            if (line.includes('SIDTS') || line.includes('SIDCC'))
+                return false;
+            return true;
+        });
+        return sanitized.join('\n');
     }
     createTempCookieFile(platform) {
         const persistentPlatformCookie = path.join(this.persistentCookiesDir, `${platform}.txt`);
@@ -180,6 +191,7 @@ let MediaService = MediaService_1 = class MediaService {
             catch {
             }
         }
+        fileContent = this.sanitizeCookieContent(fileContent);
         if (!fs.existsSync(this.cookiesDir)) {
             fs.mkdirSync(this.cookiesDir, { recursive: true });
         }
@@ -284,8 +296,7 @@ let MediaService = MediaService_1 = class MediaService {
             return 'YouTube challenged the request format for this server IP. Please upload cookies via POST /api/media/cookies or try another link.';
         }
         if (lower.includes('sign in to confirm') || lower.includes('not a bot')) {
-            const errorLine = stderr.split('\n').find((l) => l.includes('ERROR:')) || stderr.trim().slice(-200);
-            return `YouTube blocked the server IP. Details: ${errorLine.replace(/\n/g, ' ')}`;
+            return 'YouTube blocked the server IP. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
         }
         if (lower.includes('login required') || lower.includes('rate-limit reached')) {
             return 'This platform requires authentication. Please upload cookies via POST /api/media/cookies or configure COOKIES_BASE64 in Hostinger.';
@@ -564,10 +575,7 @@ let MediaService = MediaService_1 = class MediaService {
                                 raw = await this.runYtDlpExtract(cleanUrl, platform, false, fallbackClients);
                             }
                             catch (err3) {
-                                const msg1 = firstError instanceof Error ? firstError.message : String(firstError);
-                                const msg2 = err2 instanceof Error ? err2.message : String(err2);
-                                const msg3 = err3 instanceof Error ? err3.message : String(err3);
-                                throw new common_1.BadRequestException(`Attempt 1 (with cookies): ${msg1} | Attempt 2 (no cookies): ${msg2} | Attempt 3: ${msg3}`);
+                                throw err3 || err2 || firstError;
                             }
                         }
                     }

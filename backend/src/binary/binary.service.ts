@@ -35,6 +35,8 @@ export class BinaryService implements OnModuleInit, OnModuleDestroy {
       TMPDIR: tempDir,
       TEMP: tempDir,
       TMP: tempDir,
+      NODE_NO_WARNINGS: '1',
+      NODE_OPTIONS: '--no-warnings',
     };
   }
 

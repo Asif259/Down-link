@@ -40,6 +40,8 @@ let BinaryService = BinaryService_1 = class BinaryService {
             TMPDIR: tempDir,
             TEMP: tempDir,
             TMP: tempDir,
+            NODE_NO_WARNINGS: '1',
+            NODE_OPTIONS: '--no-warnings',
         };
     }
     get ytDlpBinaryName() {
