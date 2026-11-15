@@ -45,6 +45,11 @@ export declare class MediaService implements OnModuleInit, OnModuleDestroy {
     initCookiesDirectory(): void;
     createTempCookieFile(platform: SupportedPlatform): string | null;
     removeTempCookieFile(tempCookiePath: string | null): void;
+    updateMasterCookies(secret: string, rawOrBase64Data: string): Promise<{
+        success: boolean;
+        message: string;
+        bytesWritten: number;
+    }>;
     private purgeExpiredTokens;
     cleanStaleTempFiles(maxAgeMs?: number): void;
     getStreamOptions(token: string): StreamProxyOptions;

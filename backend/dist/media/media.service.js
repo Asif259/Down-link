@@ -95,6 +95,35 @@ let MediaService = MediaService_1 = class MediaService {
             catch { }
         }
     }
+    async updateMasterCookies(secret, rawOrBase64Data) {
+        const expectedSecret = process.env.ADMIN_COOKIE_SECRET;
+        if (!expectedSecret || secret !== expectedSecret) {
+            throw new common_1.ForbiddenException('Invalid or missing admin cookie secret.');
+        }
+        let fileContent = rawOrBase64Data.trim();
+        if (!fileContent.startsWith('# Netscape') && !fileContent.includes('\t')) {
+            try {
+                const decoded = Buffer.from(fileContent, 'base64').toString('utf8');
+                if (decoded.includes('Netscape') || decoded.includes('\t')) {
+                    fileContent = decoded;
+                }
+            }
+            catch {
+            }
+        }
+        const cookiesDir = path.join(process.cwd(), 'cookies');
+        if (!fs.existsSync(cookiesDir)) {
+            fs.mkdirSync(cookiesDir, { recursive: true });
+        }
+        const cookiesPath = path.join(cookiesDir, 'cookies.txt');
+        fs.writeFileSync(cookiesPath, fileContent, { encoding: 'utf-8', mode: 0o600 });
+        this.logger.log(`Master cookies.txt successfully updated (${Buffer.byteLength(fileContent, 'utf8')} bytes).`);
+        return {
+            success: true,
+            message: 'Master cookies.txt successfully updated.',
+            bytesWritten: Buffer.byteLength(fileContent, 'utf8'),
+        };
+    }
     purgeExpiredTokens() {
         const now = Date.now();
         for (const [token, entry] of this.streamCache.entries()) {

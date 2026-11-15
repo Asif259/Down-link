@@ -7,3 +7,7 @@ export declare class DownloadQueryDto {
     type: 'video' | 'audio';
     jobId?: string;
 }
+export declare class UpdateCookiesDto {
+    secret: string;
+    cookies: string;
+}

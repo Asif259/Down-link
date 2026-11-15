@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MediaService } from '../../src/media/media.service';
 import { BinaryService } from '../../src/binary/binary.service';
 import { ConcurrencyService } from '../../src/common/concurrency.service';
@@ -160,6 +160,62 @@ describe('MediaService', () => {
     } else {
       process.env.COOKIES_BASE64 = originalEnv;
     }
+  });
+
+  describe('updateMasterCookies', () => {
+    const validSecret = 'test_admin_secret_123';
+    const originalSecret = process.env.ADMIN_COOKIE_SECRET;
+
+    beforeEach(() => {
+      process.env.ADMIN_COOKIE_SECRET = validSecret;
+    });
+
+    afterEach(() => {
+      if (originalSecret === undefined) {
+        delete process.env.ADMIN_COOKIE_SECRET;
+      } else {
+        process.env.ADMIN_COOKIE_SECRET = originalSecret;
+      }
+    });
+
+    it('throws ForbiddenException when ADMIN_COOKIE_SECRET is not configured', async () => {
+      delete process.env.ADMIN_COOKIE_SECRET;
+      await expect(
+        service.updateMasterCookies(validSecret, 'some_cookie_data'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException when secret does not match', async () => {
+      await expect(
+        service.updateMasterCookies('wrong_secret', 'some_cookie_data'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('writes raw Netscape cookie content and returns success', async () => {
+      const rawCookies = '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 2000000000 SID abc123xyz';
+      const result = await service.updateMasterCookies(validSecret, rawCookies);
+
+      expect(result.success).toBe(true);
+      expect(result.bytesWritten).toBe(Buffer.byteLength(rawCookies, 'utf8'));
+
+      const targetPath = path.join((service as any).cookiesDir, 'cookies.txt');
+      expect(fs.existsSync(targetPath)).toBe(true);
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(rawCookies);
+    });
+
+    it('decodes base64-encoded Netscape cookie content before saving', async () => {
+      const rawCookies = '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 2000000000 SID base64test';
+      const base64Data = Buffer.from(rawCookies, 'utf8').toString('base64');
+
+      const result = await service.updateMasterCookies(validSecret, base64Data);
+
+      expect(result.success).toBe(true);
+      expect(result.bytesWritten).toBe(Buffer.byteLength(rawCookies, 'utf8'));
+
+      const targetPath = path.join((service as any).cookiesDir, 'cookies.txt');
+      expect(fs.existsSync(targetPath)).toBe(true);
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(rawCookies);
+    });
   });
 
   describe('formatYtDlpError', () => {

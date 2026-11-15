@@ -31,6 +31,11 @@ describe('MediaController', () => {
       }),
       getJobStream: jest.fn().mockReturnValue(of({ status: 'downloading', percent: 50 })),
       prepareMergedFile: jest.fn(),
+      updateMasterCookies: jest.fn().mockResolvedValue({
+        success: true,
+        message: 'Master cookies.txt successfully updated.',
+        bytesWritten: 123,
+      }),
     };
 
     streamProxyService = {
@@ -117,5 +122,24 @@ describe('MediaController', () => {
 
     const progressSkip = Reflect.getMetadata('THROTTLER:SKIPdefault', MediaController.prototype.streamProgress);
     expect(progressSkip).toBe(true);
+  });
+
+  it('should delegate updateCookies to MediaService with SkipThrottle', async () => {
+    const updateSpy = (mediaService.updateMasterCookies as jest.Mock).mockResolvedValue({
+      success: true,
+      message: 'Master cookies.txt successfully updated.',
+      bytesWritten: 123,
+    });
+
+    const result = await controller.updateCookies({
+      secret: 'secret123',
+      cookies: 'raw_cookie_data',
+    });
+
+    expect(updateSpy).toHaveBeenCalledWith('secret123', 'raw_cookie_data');
+    expect(result.success).toBe(true);
+
+    const cookiesSkip = Reflect.getMetadata('THROTTLER:SKIPdefault', MediaController.prototype.updateCookies);
+    expect(cookiesSkip).toBe(true);
   });
 });

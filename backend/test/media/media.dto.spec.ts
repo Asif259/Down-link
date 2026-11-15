@@ -1,6 +1,6 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { DownloadQueryDto, ExtractMediaDto } from '../../src/media/dto/media.dto';
+import { DownloadQueryDto, ExtractMediaDto, UpdateCookiesDto } from '../../src/media/dto/media.dto';
 
 describe('Media DTOs', () => {
   describe('ExtractMediaDto', () => {
@@ -80,6 +80,35 @@ describe('Media DTOs', () => {
         url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         formatId: 'bestaudio',
         type: 'unknown_type' as any,
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('UpdateCookiesDto', () => {
+    it('should validate when secret and cookies are non-empty strings', async () => {
+      const dto = plainToInstance(UpdateCookiesDto, {
+        secret: 'admin123',
+        cookies: '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 1999999999 SID test',
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
+    });
+
+    it('should reject missing or empty secret', async () => {
+      const dto = plainToInstance(UpdateCookiesDto, {
+        secret: '',
+        cookies: 'cookie_data',
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('should reject missing or empty cookies', async () => {
+      const dto = plainToInstance(UpdateCookiesDto, {
+        secret: 'admin123',
+        cookies: '',
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

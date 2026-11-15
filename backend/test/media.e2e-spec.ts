@@ -328,4 +328,63 @@ describe('MediaController (e2e)', () => {
         .expect(400);
     });
   });
+
+  describe('POST /api/media/cookies', () => {
+    const adminSecret = 'super_secret_e2e_key_123';
+    const originalSecret = process.env.ADMIN_COOKIE_SECRET;
+
+    beforeAll(() => {
+      process.env.ADMIN_COOKIE_SECRET = adminSecret;
+    });
+
+    afterAll(() => {
+      if (originalSecret === undefined) {
+        delete process.env.ADMIN_COOKIE_SECRET;
+      } else {
+        process.env.ADMIN_COOKIE_SECRET = originalSecret;
+      }
+      const cookiesPath = path.join(process.cwd(), 'cookies', 'cookies.txt');
+      if (fs.existsSync(cookiesPath)) {
+        try { fs.unlinkSync(cookiesPath); } catch {}
+      }
+    });
+
+    it('rejects with 403 Forbidden when secret is invalid or missing', async () => {
+      await request(app.getHttpServer())
+        .post('/api/media/cookies')
+        .send({
+          secret: 'wrong_secret',
+          cookies: 'test_cookie_content',
+        })
+        .expect(403);
+    });
+
+    it('rejects with 400 Bad Request when validation fails', async () => {
+      await request(app.getHttpServer())
+        .post('/api/media/cookies')
+        .send({
+          secret: adminSecret,
+          // cookies missing
+        })
+        .expect(400);
+    });
+
+    it('returns 200 OK and updates cookies.txt when valid secret and cookies are provided', async () => {
+      const cookieText = '# Netscape HTTP Cookie File\n.youtube.com TRUE / FALSE 2000000000 TEST e2e';
+      const res = await request(app.getHttpServer())
+        .post('/api/media/cookies')
+        .send({
+          secret: adminSecret,
+          cookies: cookieText,
+        })
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.bytesWritten).toBe(Buffer.byteLength(cookieText, 'utf8'));
+
+      const cookiesPath = path.join(process.cwd(), 'cookies', 'cookies.txt');
+      expect(fs.existsSync(cookiesPath)).toBe(true);
+      expect(fs.readFileSync(cookiesPath, 'utf8')).toBe(cookieText);
+    });
+  });
 });

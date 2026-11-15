@@ -26,3 +26,13 @@ export class DownloadQueryDto {
   @Matches(/^[a-zA-Z0-9_-]+$/)
   jobId?: string;
 }
+
+export class UpdateCookiesDto {
+  @IsString()
+  @IsNotEmpty()
+  secret: string;
+
+  @IsString()
+  @IsNotEmpty()
+  cookies: string; // Accepts raw text or base64 string
+}
