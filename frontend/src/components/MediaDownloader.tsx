@@ -15,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import DownloadHistory from './DownloadHistory';
+import DownlinkLogo, { LogoActivityState } from './DownlinkLogo';
 import {
   API_BASE_URL,
   CleanFormat,
@@ -310,39 +311,29 @@ export default function MediaDownloader() {
   }, []);
 
   const isBusy = loading || Boolean(activeFormatId);
+  const logoActivity: LogoActivityState = loading
+    ? 'extracting'
+    : jobProgress?.status === 'ready'
+    ? 'ready'
+    : activeFormatId || jobProgress?.status === 'downloading' || jobProgress?.status === 'merging'
+    ? 'downloading'
+    : 'idle';
 
   return (
     <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] selection:bg-[var(--color-accent)]/20 selection:text-[var(--color-ink)]">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-8">
         
-        {/* Studio Rack Top Console Header */}
+        {/* Top Header Bar */}
         <header className="flex items-center justify-between pb-5 border-b border-[var(--color-rule)]">
-          <div className="flex items-center gap-2.5">
-            <span
-              className={`w-2 h-2 rounded-full transition-colors ${
-                isBusy
-                  ? 'bg-[var(--color-accent)]'
-                  : 'bg-[var(--color-muted)]'
-              }`}
-              aria-hidden="true"
-            />
-            <span className="text-sm font-semibold tracking-tight text-[var(--color-ink)]">
-              Down-link
-            </span>
-            <span className="text-xs font-mono text-[var(--color-muted)] border-l border-[var(--color-rule)] pl-2.5">
-              Stream Engine
-            </span>
-          </div>
+          <DownlinkLogo
+            platform={media?.platform || detectedPlatform}
+            activity={logoActivity}
+            progress={jobProgress?.percent || 0}
+          />
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-[var(--color-muted)]">
-              {isBusy ? 'ACTIVE' : 'READY'}
-            </span>
-            <span
-              className={`inline-block w-1.5 h-1.5 rounded-full ${
-                isBusy ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-success)]'
-              }`}
-            />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono text-[var(--color-muted)]">
+            <span className="hidden sm:inline">YouTube • TikTok • Instagram • Facebook</span>
+            <span className="sm:hidden text-[10px]">YouTube • TikTok • IG • FB</span>
           </div>
         </header>
 

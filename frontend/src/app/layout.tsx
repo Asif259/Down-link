@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: 'Down-link — Stream Extractor & Media Downloader',
   description:
     'Extract and download high-definition video and audio streams from YouTube, TikTok, Instagram, and Facebook.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export const viewport: Viewport = {
