@@ -324,14 +324,14 @@ export default function MediaDownloader() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-8">
         
         {/* Top Header Bar */}
-        <header className="flex items-center justify-between pb-5 border-b border-[var(--color-rule)]">
+        <header className="flex items-center justify-between pb-6 border-b border-[var(--color-rule)]">
           <DownlinkLogo
             platform={media?.platform || detectedPlatform}
             activity={logoActivity}
             progress={jobProgress?.percent || 0}
           />
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono text-[var(--color-muted)]">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono text-[var(--color-muted)]">
             <span className="hidden sm:inline">YouTube • TikTok • Instagram • Facebook</span>
             <span className="sm:hidden text-[10px]">YouTube • TikTok • IG • FB</span>
           </div>

@@ -35,24 +35,42 @@ export default function DownlinkLogo({
   const isBusy = activity === 'extracting' || activity === 'downloading';
 
   const dimensions = {
-    sm: { box: 'w-8 h-8 rounded-lg', icon: 18, text: 'text-base' },
-    md: { box: 'w-9 h-9 rounded-xl', icon: 20, text: 'text-lg' },
-    lg: { box: 'w-11 h-11 rounded-xl', icon: 24, text: 'text-xl' },
+    sm: {
+      box: 'w-9 h-9 rounded-lg',
+      icon: 22,
+      text: 'text-base font-semibold',
+      dot: 'w-1.5 h-1.5',
+      gap: 'gap-2.5',
+    },
+    md: {
+      box: 'w-11 h-11 rounded-xl',
+      icon: 28,
+      text: 'text-xl sm:text-2xl font-bold',
+      dot: 'w-2 h-2',
+      gap: 'gap-3 sm:gap-3.5',
+    },
+    lg: {
+      box: 'w-14 h-14 rounded-2xl',
+      icon: 36,
+      text: 'text-2xl sm:text-3xl font-bold',
+      dot: 'w-2.5 h-2.5',
+      gap: 'gap-4',
+    },
   }[size];
 
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
   return (
     <div
-      className={`group inline-flex items-center gap-2.5 select-none ${className}`}
+      className={`group inline-flex items-center ${dimensions.gap} select-none ${className}`}
     >
       {/* Anodized Keycap Container */}
       <div
-        className={`relative flex items-center justify-center bg-zinc-900 border border-white/[0.12] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16),0_2px_8px_rgba(0,0,0,0.4)] transition-colors duration-300 group-hover:border-white/[0.22] ${dimensions.box}`}
+        className={`relative flex items-center justify-center bg-zinc-900 border border-white/[0.14] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_2px_10px_rgba(0,0,0,0.5)] transition-colors duration-300 group-hover:border-white/[0.25] ${dimensions.box}`}
       >
         {/* Subtle bottom ambient tint */}
         <div
-          className="pointer-events-none absolute inset-x-1 bottom-0 h-2.5 opacity-25 blur-sm transition-colors duration-500"
+          className="pointer-events-none absolute inset-x-1.5 bottom-0 h-3 opacity-30 blur-sm transition-colors duration-500"
           style={{ backgroundColor: accent }}
         />
 
@@ -72,7 +90,7 @@ export default function DownlinkLogo({
             animate={
               isBusy
                 ? { y: [-1, 0.5, -1], opacity: [0.6, 1, 0.6] }
-                : { y: 0, opacity: 0.85 }
+                : { y: 0, opacity: 0.9 }
             }
             transition={
               isBusy
@@ -101,15 +119,15 @@ export default function DownlinkLogo({
         {/* Minimalist Perimeter Progress Trace (Only visible during FFmpeg download) */}
         {activity === 'downloading' && (
           <svg
-            viewBox="0 0 36 36"
+            viewBox="0 0 44 44"
             className="pointer-events-none absolute -inset-[1px] w-[calc(100%+2px)] h-[calc(100%+2px)]"
           >
             <rect
               x="1"
               y="1"
-              width="34"
-              height="34"
-              rx="11"
+              width="42"
+              height="42"
+              rx="12"
               fill="none"
               stroke={accent}
               strokeWidth="1.5"
@@ -124,14 +142,14 @@ export default function DownlinkLogo({
 
       {/* Clean Studio Wordmark */}
       {variant === 'full' && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <span
-            className={`font-semibold tracking-[-0.03em] text-zinc-100 ${dimensions.text}`}
+            className={`font-bold tracking-[-0.035em] text-white ${dimensions.text}`}
           >
             downlink
           </span>
           <span
-            className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
+            className={`${dimensions.dot} rounded-full transition-colors duration-500 shadow-sm ${
               isBusy ? 'animate-ping' : ''
             }`}
             style={{ backgroundColor: accent }}
