@@ -201,8 +201,8 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
   }
 
   createTempCookieFile(platform: SupportedPlatform): string | null {
-    const persistentPlatformCookie = path.join(this.persistentCookiesDir, `${platform}.txt`);
-    const localPlatformCookie = path.join(this.cookiesDir, `${platform}.txt`);
+    const persistentPlatformCookie = this.safePath(this.persistentCookiesDir, `${platform}.txt`);
+    const localPlatformCookie = this.safePath(this.cookiesDir, `${platform}.txt`);
 
     let sourcePath: string | null = null;
     if (fs.existsSync(persistentPlatformCookie)) {
@@ -388,6 +388,14 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
         this.jobStreams.delete(jobId);
       }
     }
+  }
+
+  private safePath(baseDir: string, fileName: string): string {
+    const resolved = path.resolve(baseDir, fileName);
+    if (!resolved.startsWith(path.resolve(baseDir) + path.sep) && resolved !== path.resolve(baseDir)) {
+      throw new BadRequestException('Invalid path component.');
+    }
+    return resolved;
   }
 
   private sanitizeFilename(rawTitle: string, ext: string): string {
@@ -805,9 +813,9 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     const title = rawData.title || 'YouTube Video';
     const ext = type === 'audio' ? 'mp3' : 'mp4';
     const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const finalPath = path.join(this.tempDir, `${uniqueId}.${ext}`);
-    const tempVideoPath = path.join(this.tempDir, `${uniqueId}_v.part`);
-    const tempAudioPath = path.join(this.tempDir, `${uniqueId}_a.part`);
+    const finalPath = this.safePath(this.tempDir, `${uniqueId}.${ext}`);
+    const tempVideoPath = this.safePath(this.tempDir, `${uniqueId}_v.part`);
+    const tempAudioPath = this.safePath(this.tempDir, `${uniqueId}_a.part`);
 
     const cleanupTempArtifacts = () => {
       try {
@@ -1476,8 +1484,8 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
     const cleanUrl = this.normalizeMediaUrl(url, platform);
     const uniqueId = jobId || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const ext = type === 'audio' ? 'mp3' : 'mp4';
-    const outputTemplate = path.join(this.tempDir, `${uniqueId}.%(ext)s`);
-    const finalPath = path.join(this.tempDir, `${uniqueId}.${ext}`);
+    const outputTemplate = this.safePath(this.tempDir, `${uniqueId}.%(ext)s`);
+    const finalPath = this.safePath(this.tempDir, `${uniqueId}.${ext}`);
 
     // If format is from YouTube fallback service, handle direct stream retrieval & ffmpeg mux
     if (formatId.startsWith('youtube-fallback-')) {
